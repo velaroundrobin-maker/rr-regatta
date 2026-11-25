@@ -1,5 +1,5 @@
 // Campo di regata: modelli dalle istruzioni, sequenza del percorso, obiettivo della tappa.
-import {distanceMeters, bearing, estimateMarkFromBearings, rad} from "./engine.mjs";
+import {distanceMeters, bearing, estimateMarkFromBearings, rad} from "./engine.mjs?v=0.3.1";
 
 const boa = (codice, nome, tipo, pos = null) => ({codice, nome, tipo, pos});
 const daIstruzioni = (gLat, mLat, gLon, mLon) => ({lat: gLat + mLat / 60, lon: gLon + mLon / 60, acc: null, t: null, fonte: "istruzioni"});

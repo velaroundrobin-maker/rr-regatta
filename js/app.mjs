@@ -1,11 +1,11 @@
 // RR Regatta · v0.3: navigazione GPS, campo di regata, boe, rilevamenti, arrivo, salvataggio.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs";
-import {markVMC, norm} from "./engine.mjs";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs";
-import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs";
-import {nuovaSessione, applicaModello, verifica, carica, salva} from "./stato.mjs";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.3.1";
+import {markVMC, norm} from "./engine.mjs?v=0.3.1";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.3.1";
+import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.3.1";
+import {nuovaSessione, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.3.1";
 
-const VERSIONE = "0.3";
+const VERSIONE = "0.3.1";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -200,7 +200,9 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // ---------------- Disegno: parte che cambia ogni secondo ----------------
-function aggiorna() { if (!aggiorna.attesa) { aggiorna.attesa = true; requestAnimationFrame(() => { aggiorna.attesa = false; disegnaNav(); }); } }
+// Ridisegno raggruppato con un timer: a differenza di requestAnimationFrame non si ferma mai,
+// anche se il browser considera la pagina in secondo piano.
+function aggiorna() { if (!aggiorna.attesa) { aggiorna.attesa = true; setTimeout(() => { aggiorna.attesa = false; disegnaNav(); }, 30); } }
 
 function descriviFonte(ob) {
   switch (ob.fonte) {

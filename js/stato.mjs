@@ -1,5 +1,5 @@
 // Sessione di regata: creazione, cambio modello senza perdere le posizioni, salvataggio e verifica dei file.
-import {MODELLI} from "./campo.mjs";
+import {MODELLI} from "./campo.mjs?v=0.3.1";
 
 export const CHIAVE = "rr-regatta-sessione-v1";
 const copia = x => JSON.parse(JSON.stringify(x));
