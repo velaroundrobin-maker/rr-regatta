@@ -141,3 +141,16 @@ test("taratura: vento a motore più recente della coppia di boline", () => {
   const t = taratura({iniziale: {dir: 20, metodo: "motore", t: T + 60 * min}, rif: {dritta: {cog: 315, t: T}, sinistra: {cog: 45, t: T + min}}, angoloVirata: 90});
   assert.equal(t.dir, 20); assert.equal(t.fonte, "motore"); assert.deepEqual(t.off, {sinistra: 45, dritta: -45}); assert.equal(t.misurato, false);
 });
+import {andatura} from "../js/vento.mjs";
+test("andatura dall'angolo tra rotta e vento", () => {
+  assert.equal(andatura(45, 0).nome, "Bolina stretta");
+  assert.equal(andatura(45, 0).mura, "sinistra");
+  assert.equal(andatura(300, 0).nome, "Bolina larga");
+  assert.equal(andatura(300, 0).mura, "dritta");
+  assert.equal(andatura(90, 0).nome, "Traverso");
+  assert.equal(andatura(230, 100).nome, "Lasco");
+  assert.equal(andatura(150, 0).nome, "Gran lasco");
+  assert.equal(andatura(178, 0).nome, "Poppa");
+  assert.equal(andatura(10, 0).nome, "Prua al vento");
+  assert.equal(andatura(NaN, 0), null);
+});

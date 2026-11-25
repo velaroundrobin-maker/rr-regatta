@@ -5,19 +5,40 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.6">
+<link rel="stylesheet" href="./app.css?v=0.7">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.6</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.7</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
+  <!-- PAGINA INIZIALE -->
+  <main class="vista scorre" id="vista-home">
+    <h1 class="home-titolo">Che cosa facciamo oggi?</h1>
+    <button type="button" class="modo-app" data-modo-app="navigazione"><strong>Navigazione</strong><span>Rotta, velocità, vento medio e andatura. Per andare per mare.</span></button>
+    <button type="button" class="modo-app" data-modo-app="allenamento"><strong>Allenamento</strong><span>Esercizi con boe virtuali, prove di partenza con timer e cronometro.</span></button>
+    <button type="button" class="modo-app" data-modo-app="regata"><strong>Regata</strong><span>Campo di regata, linea di partenza, salti di vento, lay-line, arrivo.</span></button>
+    <button type="button" class="modo-app" data-modo-app="polari"><strong>Polari</strong><span>Misurare le velocità della barca per angolo, vento e vele.</span></button>
+    <button type="button" class="secondario largo" id="home-altro">File, registro e impostazioni</button>
+    <p class="aiuto" id="home-stato">—</p>
+  </main>
+
+  <!-- PREPARAZIONE GUIDATA -->
+  <main class="vista scorre" id="vista-guida" hidden>
+    <section class="blocco">
+      <h2 id="guida-titolo">PREPARAZIONE</h2>
+      <p class="guida-intro" id="guida-intro">—</p>
+    </section>
+    <ol class="guida-passi" id="guida-passi"></ol>
+    <button type="button" class="principale largo" id="guida-vai">Vai allo schermo</button>
+  </main>
+
   <!-- NAVIGAZIONE -->
-  <main class="vista vista-nav" id="vista-nav">
+  <main class="vista vista-nav" id="vista-nav" hidden>
     <section class="strumenti" aria-label="Strumenti di navigazione">
       <div class="strumento" id="cella-cog">
         <span class="etichetta">ROTTA <small>COG</small></span>
@@ -29,6 +50,11 @@
         <output class="valore"><span id="sog">—</span><small> kn</small></output>
         <span class="nota" id="nota-sog">GPS fermo</span>
       </div>
+      <div class="strumento" id="cella-andatura" hidden>
+        <span class="etichetta">ANDATURA</span>
+        <output class="valore andatura" id="andatura">—</output>
+        <span class="nota" id="nota-andatura">—</span>
+      </div>
       <div class="strumento" id="cella-vento">
         <span class="etichetta">VENTO <small>medio</small></span>
         <output class="valore" id="vento">—</output>
@@ -36,7 +62,7 @@
       </div>
     </section>
 
-    <section class="prossima" aria-label="Prossima boa">
+    <section class="prossima" id="striscia-boa" aria-label="Prossima boa">
       <div class="prossima-testa">
         <span class="verso">VERSO</span><strong class="codice" id="pr-codice">—</strong>
         <span class="pr-nome" id="pr-nome">—</span>
@@ -50,6 +76,15 @@
       </div>
       <small class="pr-nota" id="pr-nota">—</small>
       <small class="pr-tattica" id="pr-tattica" hidden>—</small>
+    </section>
+
+    <section class="prossima striscia-polari" id="striscia-polari" hidden aria-label="Polari">
+      <div class="prossima-dati">
+        <div><span>ANGOLO DAL VENTO</span><b id="sp-twa">—</b></div>
+        <div><span>POLARE</span><b id="sp-pol">—</b></div>
+        <div><span>RISPETTO</span><b id="sp-perc">—</b></div>
+      </div>
+      <small class="pr-nota" id="sp-stato">—</small>
     </section>
 
     <section class="mappa" id="mappa" aria-label="Mappa: nord in alto">
@@ -113,6 +148,7 @@
       <button type="button" class="principale" id="btn-gps">Avvia GPS</button>
       <button type="button" class="interruttore-bolina" id="btn-bolina" aria-pressed="false" hidden>Bolina stretta?</button>
       <button type="button" class="secondario" id="btn-passata">Boa passata ›</button>
+      <button type="button" class="interruttore-bolina registra-azione" id="btn-registra" aria-pressed="false" hidden>Registra: no</button>
       <button type="button" class="principale" id="btn-traguardo" hidden>Taglia il traguardo</button>
     </section>
   </main>
@@ -351,15 +387,10 @@
     </section>
   </main>
 
-  <nav class="schede" aria-label="Sezioni">
-    <button type="button" data-vista="vista-nav" aria-current="page">Navigazione</button>
-    <button type="button" data-vista="vista-regata">Regata</button>
-    <button type="button" data-vista="vista-polari">Polari</button>
-    <button type="button" data-vista="vista-altro">Altro</button>
-  </nav>
+  <nav class="schede" id="schede" aria-label="Sezioni" hidden></nav>
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.6"></script>
+<script type="module" src="./js/app.mjs?v=0.7"></script>
 </body>
 </html>

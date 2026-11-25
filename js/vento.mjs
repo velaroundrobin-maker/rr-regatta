@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.6";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.7";
 
 export const MURE = ["dritta", "sinistra"];
 
@@ -192,4 +192,13 @@ export function latoFavorito(cdr, pin, dir) {
   const vantaggio = p.x * su.x + p.y * su.y; // > 0: la boa P è più sopravvento
   const sbilanciamento = Math.asin(Math.max(-1, Math.min(1, vantaggio / lunghezza))) * 180 / Math.PI;
   return {favorito: Math.abs(sbilanciamento) < 2 ? "neutra" : vantaggio > 0 ? "P" : "CdR", vantaggio: Math.abs(vantaggio), sbilanciamento: Math.abs(sbilanciamento), lunghezza};
+}
+
+// ---------------- Andatura ----------------
+// Dall'angolo tra la rotta sul fondo e il vento. Limiti indicativi: la bolina stretta reale dipende dalla barca.
+export function andatura(cog, dirVento) {
+  if (!Number.isFinite(cog) || !Number.isFinite(dirVento)) return null;
+  const a = Math.abs(delta(cog, dirVento));
+  const nome = a < 30 ? "Prua al vento" : a < 50 ? "Bolina stretta" : a < 75 ? "Bolina larga" : a < 105 ? "Traverso" : a < 135 ? "Lasco" : a < 165 ? "Gran lasco" : "Poppa";
+  return {nome, angolo: a, mura: muraDa(cog, dirVento)};
 }

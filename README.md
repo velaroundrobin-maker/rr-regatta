@@ -4,6 +4,15 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.7 — pagina iniziale e preparazione guidata
+
+- All'apertura: Navigazione, Allenamento, Regata, Polari (più file, registro e impostazioni).
+- Ogni modalità ha una preparazione guidata: passi spiegati, spunta quando fatti, pulsanti per farli subito, passi facoltativi.
+- Navigazione: rotta, velocità, vento medio e andatura (bolina stretta, bolina larga, traverso, lasco, gran lasco, poppa), senza campo.
+- Allenamento e Regata: striscia verso la boa, campo sulla mappa, timer. Polari: angolo dal vento, polare e % in tempo reale, pulsante Registra.
+- Il GPS si accende da solo all'apertura; entrando in una modalità lo schermo resta acceso.
+- Cronometro e timer: pulsante «Stop».
+
 ## Versione 0.6 — timer di partenza, cronometro, campi d'allenamento disegnati
 
 - Timer di partenza (Navigazione → Crono): da −5:00, beep lungo a −5, −4, −3, −2, −1, raffica allo zero, poi tempo di regata; Sincronizza al minuto più vicino, ±1 minuto; beep negli ultimi 10 secondi a scelta.

@@ -248,3 +248,34 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .allenamento{margin-top:8px;border-top:1px solid #333;padding-top:4px}
 @media (max-height:500px) and (orientation:landscape){.crono-tempo{font-size:40px}.crono{right:60px}}
 .crono-comandi button.largo2{flex:2.2;font-size:16px}
+
+/* ----- v0.7: pagina iniziale, preparazione guidata, modalità ----- */
+.home-titolo{font-size:24px;margin:6px 2px 2px}
+.modo-app{display:flex;flex-direction:column;gap:4px;text-align:left;width:100%;min-height:86px;padding:12px 14px;border-radius:14px;border:2px solid #555;border-left:6px solid var(--rosso);background:var(--pannello)}
+.modo-app strong{font-size:24px;font-weight:900}
+.modo-app span{font-size:14px;color:var(--grigio);font-weight:600;line-height:1.35}
+.modo-app:active{background:#222}
+.guida-intro{font-size:15px;line-height:1.45;margin:0}
+.guida-passi{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.passo{background:var(--pannello);border:1px solid var(--linea);border-radius:12px;padding:10px 12px}
+.passo.fatto{border-color:#666}
+.passo-testa{display:flex;align-items:center;gap:10px}
+.passo-testa i{flex:none;width:32px;height:32px;border-radius:50%;border:2px solid var(--rosso);display:grid;place-items:center;font-style:normal;font-weight:900;font-size:16px}
+.passo.fatto .passo-testa i{background:#fff;border-color:#fff;color:#000}
+.passo-testa strong{font-size:17px}
+.passo-testa small{margin-left:auto;font-size:12px;color:var(--grigio);font-weight:700}
+.passo p{margin:6px 0 0;font-size:14px;line-height:1.4;color:var(--grigio)}
+.passo p.passo-stato{color:#fff;font-weight:800}
+.passo-azioni{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.passo-azioni button{flex:1 1 40%;min-height:46px;border-radius:9px;border:1px solid #777;background:#222;font-weight:800;font-size:15px;padding:4px 8px}
+.passo-azioni button.principale{background:var(--rosso);border:2px solid var(--rosso)}
+.schede{grid-template-columns:repeat(var(--n,4),1fr)}
+.valore.andatura{font-size:clamp(24px,7.6vw,46px);letter-spacing:-.5px;white-space:normal;line-height:1.1}
+.vista-nav[data-modo="navigazione"] .strumenti,.vista-nav[data-modo="polari"] .strumenti{grid-template-columns:repeat(2,minmax(0,1fr))}
+.striscia-polari{grid-area:prossima}
+.registra-azione[aria-pressed="true"]{background:var(--rosso);border-color:var(--rosso);color:#fff}
+@media (min-width:900px) and (orientation:landscape){.vista-nav[data-modo="navigazione"] .strumenti,.vista-nav[data-modo="polari"] .strumenti{grid-template-columns:1fr 1fr}.vista-nav[data-modo="navigazione"] .valore{font-size:64px}}
+#cella-andatura{order:4}
+#vista-home .secondario{flex:none}
+.passo p{font-weight:500}
+@media (min-width:900px) and (orientation:landscape){.vista-nav .valore.andatura{font-size:34px}}
