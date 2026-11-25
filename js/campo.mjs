@@ -1,5 +1,5 @@
 // Campo di regata: modelli dalle istruzioni, sequenza del percorso, obiettivo della tappa.
-import {distanceMeters, bearing, estimateMarkFromBearings, rad} from "./engine.mjs?v=0.5.1";
+import {distanceMeters, bearing, estimateMarkFromBearings, rad, move, norm} from "./engine.mjs?v=0.6";
 
 const boa = (codice, nome, tipo, pos = null) => ({codice, nome, tipo, pos});
 const daIstruzioni = (gLat, mLat, gLon, mLon) => ({lat: gLat + mLat / 60, lon: gLon + mLon / 60, acc: null, t: null, fonte: "istruzioni"});
@@ -40,8 +40,60 @@ for (const percorso of [1, 2, 3]) for (const gruppo of [1, 2]) {
       : "Costiero. Tutte le boe a sinistra; D solo se posata. G è il passaggio al cancello (linea di partenza/arrivo): tempo valido come prima prova."
   };
 }
+MODELLI["allenamento"] = {nome: "Allenamento · campo disegnato", boe: [], sequenza: "S", arrivo: {ugualePartenza: true, etichette: ["Battello CdR", "Boa di partenza"]},
+  note: "Boe virtuali per gli esercizi: usa i campi pronti qui sotto oppure «Disegna sulla mappa». La sequenza si aggiorna da sola; l'arrivo è sulla linea di partenza."};
 MODELLI["personalizzato"] = {nome: "Personalizzato", boe: PARTENZA, sequenza: "S - F", arrivo: {ugualePartenza: false, etichette: ["Estremo 1", "Estremo 2"]},
   note: "Aggiungi le boe e scrivi la sequenza: S partenza, F arrivo, G cancello, boa eventuale tra parentesi, ad esempio S - (D) - 1 - 2 - F."};
+
+// ---------------- Campi d'allenamento ----------------
+// Boe virtuali costruite intorno alla barca, orientate sul vento (da dove viene).
+// La barca CdR sta all'estremo destro della linea guardando il vento, la boa P a sinistra.
+export const TIPI_ALLENAMENTO = {
+  partenza: "Solo linea di partenza", bolina: "Partenza e boa di bolina", bastone: "Bastone (bolina e poppa)", dueboe: "Due boe, senza partenza"
+};
+export function campoAllenamento(tipo, {centro, vento, lunghezza = 100, distanza = 400, giri = 1, adesso = Date.now()}) {
+  if (!TIPI_ALLENAMENTO[tipo]) throw new Error("Campo d'allenamento sconosciuto");
+  const pos = p => ({lat: p.lat, lon: p.lon, acc: null, t: adesso, fonte: "disegnata"});
+  const b = (codice, nome, tipoBoa, p) => ({codice, nome, tipo: tipoBoa, pos: pos(p), storico: [], osservazioni: []});
+  const linea = [b("CdR", "Battello comitato (virtuale)", "partenza", move(centro, norm(vento + 90), lunghezza / 2)),
+                 b("P", "Boa di partenza (virtuale)", "partenza", move(centro, norm(vento - 90), lunghezza / 2))];
+  const bolina = b("1", "Boa di bolina (virtuale)", "bolina", move(centro, vento, distanza));
+  const giro = (pezzo) => Array.from({length: Math.max(1, giri)}, () => pezzo).join(" - ");
+  const descr = " · linea " + Math.round(lunghezza) + " m, bolina " + Math.round(distanza) + " m";
+  switch (tipo) {
+    case "partenza": return {nome: "Allenamento · solo partenza · linea " + Math.round(lunghezza) + " m", boe: linea, sequenza: "S"};
+    case "bolina": return {nome: "Allenamento · partenza e bolina" + descr, boe: [...linea, bolina], sequenza: "S - 1 - F"};
+    case "bastone": return {nome: "Allenamento · bastone " + giri + (giri > 1 ? " giri" : " giro") + descr,
+      boe: [...linea, bolina, b("2", "Boa di poppa (virtuale)", "poppa", move(centro, norm(vento + 180), 50))], sequenza: "S - " + giro("1 - 2") + " - F"};
+    case "dueboe": return {nome: "Allenamento · due boe a " + Math.round(distanza) + " m", sequenza: giro("1 - 2"),
+      boe: [bolina, b("2", "Boa 2 (virtuale)", "poppa", centro)]};
+  }
+}
+// Sequenza automatica del campo disegnato: partenza se c'è la linea, le boe nell'ordine in cui sono state messe, arrivo sulla linea.
+export function sequenzaDisegnata(boe) {
+  const linea = trovaBoa(boe, "CdR")?.pos && trovaBoa(boe, "P")?.pos;
+  const percorso = boe.filter(x => x.tipo !== "partenza" && x.pos).map(x => x.codice);
+  return [...(linea ? ["S"] : []), ...percorso, ...(linea && percorso.length ? ["F"] : [])].join(" - ");
+}
+// Ritocchi della sequenza mentre si disegna: la boa nuova va prima dell'arrivo, quella tolta sparisce,
+// e quando la linea di partenza è completa si aggiungono partenza e arrivo.
+export function aggiornaSequenza(sequenza, boe, {aggiunta = null, tolta = null} = {}) {
+  let t = leggiSequenza(sequenza).map(x => ({...x}));
+  if (tolta) t = t.filter(x => x.codice.toUpperCase() !== tolta.toUpperCase());
+  if (aggiunta) {
+    const n = {codice: aggiunta, tipo: "boa", opzionale: false};
+    if (t.length && t[t.length - 1].tipo === "arrivo") t.splice(t.length - 1, 0, n); else t.push(n);
+  }
+  const linea = trovaBoa(boe, "CdR")?.pos && trovaBoa(boe, "P")?.pos;
+  if (linea && !t.some(x => x.tipo === "partenza")) t.unshift({codice: "S", tipo: "partenza"});
+  if (!linea) t = t.filter(x => x.tipo !== "partenza" && x.tipo !== "arrivo" && x.tipo !== "cancello");
+  if (linea && t.some(x => x.tipo === "boa") && t[t.length - 1].tipo !== "arrivo") t.push({codice: "F", tipo: "arrivo"});
+  if (linea && !t.some(x => x.tipo === "boa")) t = t.filter(x => x.tipo !== "arrivo");
+  return t.map(x => x.opzionale ? "(" + x.codice + ")" : x.codice).join(" - ");
+}
+export function prossimoCodice(boe) {
+  for (let i = 1; ; i++) if (!trovaBoa(boe, String(i))) return String(i);
+}
 
 // ---------------- Sequenza ----------------
 export function leggiSequenza(testo) {

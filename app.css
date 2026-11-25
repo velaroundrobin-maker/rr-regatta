@@ -216,3 +216,35 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .indice::-webkit-scrollbar{display:none}
 .indice button{flex:none;min-height:40px;padding:4px 12px;border-radius:20px;border:1px solid #666;background:#202020;font-size:14px;font-weight:800}
 @media (min-width:900px) and (orientation:landscape){.indice{margin:-8px 0 0;border-radius:0 0 12px 12px}}
+
+/* ----- v0.6: timer, cronometro, disegno del campo ----- */
+.crono{position:absolute;left:7px;right:62px;top:7px;z-index:3;background:#000;border:2px solid #fff;border-radius:12px;padding:6px 8px 8px}
+.crono-testa{display:flex;gap:6px;align-items:center}
+.crono-modo{flex:1}
+.crono-modo button{min-height:36px;font-size:14px}
+.crono-chiudi{min-width:40px;min-height:36px;border-radius:8px;border:1px solid #666;background:#202020;font-size:22px;font-weight:800;padding:0}
+.crono-tempo{display:block;text-align:center;font-size:clamp(44px,15vw,76px);font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-1px;margin:2px 0}
+.crono-tempo.partiti{color:var(--rosso)}
+.crono-info{margin:0 0 6px;text-align:center;font-size:14px;font-weight:800;min-height:19px;line-height:1.35}
+.crono-info.allarme-linea{background:var(--rosso);color:#fff;border-radius:6px;padding:2px 6px}
+.crono-comandi{display:flex;gap:6px}
+.crono-comandi button{flex:1;min-height:46px;border-radius:9px;border:1px solid #777;background:#222;font-size:15px;font-weight:800;padding:2px 4px}
+.crono-comandi button.principale{background:var(--rosso);border:2px solid var(--rosso);font-size:17px}
+.parziali{margin:6px 0 0;padding:0;list-style:none;max-height:96px;overflow-y:auto;font-size:13px;font-variant-numeric:tabular-nums}
+.parziali li{display:flex;gap:8px;padding:3px 2px;border-top:1px solid #333}
+.parziali b{min-width:68px}
+.parziali span{color:var(--grigio)}
+.crono-pillola{position:absolute;top:7px;left:50%;transform:translateX(-50%);z-index:3;min-height:44px;padding:4px 16px;border-radius:22px;border:2px solid #fff;background:#000;font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+.crono-pillola.partiti{border-color:var(--rosso)}
+.disegno-barra{position:absolute;left:6px;right:6px;bottom:6px;z-index:3;background:#000e;border:2px solid var(--rosso);border-radius:12px;padding:5px 6px;display:flex;flex-direction:column;gap:4px}
+.disegno-barra p{margin:0;font-size:12px;font-weight:700;line-height:1.25}
+.disegno-barra .segmento{flex:3}.disegno-barra .segmento button{min-height:42px;padding:0 2px;font-size:14px}
+.disegno-comandi{display:flex;gap:6px}
+.disegno-comandi>button{flex:1;min-height:42px;border-radius:9px;border:1px solid #777;background:#222;font-weight:800;font-size:15px;padding:0 4px}
+#disegno-annulla{flex:0 0 44px;font-size:22px}
+.disegno-comandi button.principale{background:var(--rosso);border-color:var(--rosso)}
+.scelte.due{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
+.riga-campi.tre{grid-template-columns:repeat(3,minmax(0,1fr))}
+.allenamento{margin-top:8px;border-top:1px solid #333;padding-top:4px}
+@media (max-height:500px) and (orientation:landscape){.crono-tempo{font-size:40px}.crono{right:60px}}
+.crono-comandi button.largo2{flex:2.2;font-size:16px}

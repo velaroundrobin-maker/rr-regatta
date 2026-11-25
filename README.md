@@ -4,6 +4,14 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.6 — timer di partenza, cronometro, campi d'allenamento disegnati
+
+- Timer di partenza (Navigazione → Crono): da −5:00, beep lungo a −5, −4, −3, −2, −1, raffica allo zero, poi tempo di regata; Sincronizza al minuto più vicino, ±1 minuto; beep negli ultimi 10 secondi a scelta.
+- Distanza-tempo dalla linea: metri, secondi alla velocità attuale, anticipo o ritardo sullo zero, avviso «oltre la linea», estremo superato.
+- Cronometro: avvio, pausa, tempi parziali con metri percorsi e velocità media.
+- Campi d'allenamento con boe virtuali intorno alla barca, orientati sul vento: solo partenza, partenza e bolina, bastone (1–3 giri), due boe.
+- Disegno sulla mappa: tocca per mettere boe, CdR e P; trascina per spostarle; annulla; la sequenza si aggiorna mantenendo i giri.
+
 ## Versione 0.5 — polari apprese in allenamento
 
 - Schede riordinate per momento d'uso: Navigazione (lo schermo da guardare navigando), Regata (percorso, boe, taratura, partenza, vento in regata, arrivo, allarmi, con indice in alto), Polari, Altro.
@@ -52,6 +60,7 @@ Nessun dato viene inviato a server esterni.
 - `js/nav.mjs` — smorzamento, moto calcolato, formati italiani
 - `js/campo.mjs` — modelli di campo, sequenza, obiettivo della tappa, triangolazione
 - `js/stato.mjs` — sessione, cambio modello, salvataggio e verifica dei file
+- `js/cronometro.mjs` — timer di partenza, segnali, cronometro, distanza-tempo dalla linea
 - `js/polari.mjs` — raccolta dei punti, calcolo della polare, angoli ottimi, tabella, unione di file
 - `js/vento.mjs` — taratura, stima del vento in bolina, salto, buono/scarso, tipo di vento, allarmi, bordo favorevole, lay-line, lato favorito della linea
 - `test/` — `node --test test/*.test.mjs`

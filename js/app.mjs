@@ -1,15 +1,17 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.5.1";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.5.1";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.5.1";
-import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.5.1";
-import {nuovaSessione, nuovoVento, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.5.1";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.6";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.6";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.6";
+import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.6";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.6";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.6";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.5.1";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.6";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.5.1";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.6";
 
-const VERSIONE = "0.5.1";
+const VERSIONE = "0.6";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -55,6 +57,7 @@ const st = {
   mostraTraccia: false, vuoleSchermo: false, wakeLock: null,
   vista: "vista-nav", rilievo: {codice: null, lato: -1},
   mura: null, ultimaVirata: 0, stima: null, bs: null, allScarso: null, poggiataDa: null, ultimoRegistro: 0, audio: null,
+  cronoAperto: false, cronoModo: "timer", ultimoTick: Date.now(), disegno: null, trascina: null, tocco: null, annullaDisegno: [], selezionata: null, vc: null, tipoAllenamento: "partenza",
   polRegistra: false, polValuta: null, polUltimo: 0, polCambioVele: 0, polNuovi: 0, polClasse: null, polConfig: "attuale", polMetodo: "fermo"
 };
 const gpsAttivo = () => st.watch !== null;
@@ -379,6 +382,229 @@ function scaricaFile(nome, testo, tipo) {
 }
 const dataFile = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "-" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0"); };
 
+// ---------------- Timer di partenza e cronometro (v0.6) ----------------
+// Suoni: beep lungo e forte ai minuti, raffica allo zero («partiti»), beep breve negli ultimi 10 secondi.
+function suono(tipo) {
+  try { navigator.vibrate?.(tipo === "partenza" ? [150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150] : tipo === "lungo" ? [1000] : [80]); } catch {}
+  const a = st.audio; if (!a) return;
+  try {
+    const t0 = a.currentTime + 0.02;
+    const bip = (t, durata, freq) => {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = "square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45, t + 0.015);
+      g.gain.setValueAtTime(0.45, t + durata - 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + durata);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + durata + 0.02);
+    };
+    if (tipo === "lungo") bip(t0, 1.1, 880);
+    else if (tipo === "partenza") for (let i = 0; i < 9; i++) bip(t0 + i * 0.22, 0.13, 1050);
+    else bip(t0, 0.12, 1250);
+  } catch {}
+}
+function tickTimer() {
+  const adesso = Date.now(), z = s.timer.zero;
+  if (Number.isFinite(z)) for (const x of segnali(z, st.ultimoTick, adesso, {ultimi10: s.timer.ultimi10})) {
+    suono(x.tipo);
+    if (x.tipo === "partenza") { s.timer.partenza = z; evento("PARTENZA dal timer alle " + ora(z)); salvaPresto(); }
+    else if (x.tipo === "lungo") evento("Timer: −" + x.minuto + " min");
+  }
+  st.ultimoTick = adesso;
+  if (st.vista === "vista-nav") disegnaCrono(adesso);
+}
+function comandoTimer(azione) {
+  const adesso = Date.now(), z = s.timer.zero;
+  if (azione === "avvia") { s.timer.zero = avviaTimer(adesso); s.timer.partenza = null; evento("Timer avviato: −5:00"); suono("lungo"); }
+  else if (azione === "sinc") { s.timer.zero = sincronizza(z, adesso); evento("Timer sincronizzato: " + testoTimer(s.timer.zero, adesso)); suono("breve"); }
+  else if (azione === "meno") s.timer.zero = spostaMinuto(z, -1);
+  else if (azione === "piu") s.timer.zero = spostaMinuto(z, 1);
+  else if (azione === "ferma") {
+    if (z > adesso && !confirm("Fermare il timer di partenza?")) return;
+    s.timer.zero = null; evento("Timer fermato");
+  }
+  st.ultimoTick = adesso; salvaPresto(); disegnaCrono(adesso);
+}
+function testoLinea(adesso) {
+  const linea = lineaPartenza(s.boe);
+  if (!linea) return {testo: "Segna CdR e P (Regata → Boe) per distanza e tempo dalla linea.", classe: ""};
+  if (!fixVivo()) return {testo: "Serve il GPS per distanza e tempo dalla linea.", classe: ""};
+  const nav = smoothNav(st.fixes), sv = statoVento(adesso);
+  const prima = trovaBoa(s.boe, tappe(s.campo.sequenza).find(t => t.tipo === "boa")?.codice || "")?.pos || null;
+  const r = distanzaTempo({barca: st.fix, cog: nav.cog, sog: nav.sog, linea, dirVento: Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir, boa: prima,
+    mancanoMs: Number.isFinite(s.timer.zero) ? s.timer.zero - adesso : null});
+  if (!r) return {testo: "Linea troppo corta: controlla CdR e P.", classe: ""};
+  const prePartenza = Number.isFinite(s.timer.zero) && s.timer.zero > adesso;
+  if (r.oltreLinea) return {testo: prePartenza ? "OLTRE LA LINEA: torna sotto!" : "Oltre la linea di " + Math.round(-r.distanza) + " m", classe: prePartenza ? "allarme-linea" : ""};
+  const parti = ["Linea " + Math.round(r.distanza) + " m"];
+  if (r.secondi !== null) parti.push(Math.round(r.secondi) + " s a " + numero(r.verso, 1) + " kn");
+  else if (r.verso !== null && r.verso <= 0.3) parti.push(r.verso < 0 ? "ti allontani" : "parallelo alla linea");
+  if (prePartenza && r.scarto !== null) parti.push(r.scarto < -1.5 ? "ANTICIPO " + Math.round(-r.scarto) + " s" : r.scarto > 1.5 ? "RITARDO " + Math.round(r.scarto) + " s" : "IN TEMPO");
+  if (r.fuori) parti.push(r.fuori);
+  if (!r.orientata) parti.push("tara il vento per il lato giusto");
+  return {testo: parti.join(" · "), classe: ""};
+}
+function disegnaCrono(adesso = Date.now()) {
+  const z = s.timer.zero, cr = s.cronometro, timerAttivo = Number.isFinite(z), crAttivo = cr.inizio !== null || cr.accumulato > 0;
+  $("crono").hidden = !st.cronoAperto;
+  const pill = $("crono-pillola");
+  pill.hidden = st.cronoAperto || !(timerAttivo || cr.inizio !== null);
+  if (!pill.hidden) { pill.textContent = timerAttivo ? testoTimer(z, adesso) : "⏱ " + testoCronometro(tempoCronometro(cr, adesso)); pill.className = "crono-pillola" + (timerAttivo && z <= adesso ? " partiti" : ""); }
+  $("btn-crono").classList.toggle("attivo", st.cronoAperto || timerAttivo || cr.inizio !== null);
+  if (!st.cronoAperto) return;
+  document.querySelectorAll("[data-modo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.modo === st.cronoModo)));
+  $("crono-timer").hidden = st.cronoModo !== "timer"; $("crono-cronometro").hidden = st.cronoModo !== "cronometro";
+  if (st.cronoModo === "timer") {
+    const t = $("timer-tempo");
+    t.textContent = timerAttivo ? testoTimer(z, adesso) : "−5:00";
+    t.className = "crono-tempo" + (timerAttivo && z <= adesso ? " partiti" : "");
+    const info = $("timer-info");
+    if (timerAttivo && z <= adesso) { info.textContent = "Partiti alle " + ora(z) + " · tempo di regata"; info.className = "crono-info"; }
+    else { const l = testoLinea(adesso); info.textContent = l.testo; info.className = "crono-info " + l.classe; }
+    html("timer-comandi", !timerAttivo ? '<button type="button" class="principale" data-timer="avvia">Avvia −5:00</button>'
+      : z > adesso ? '<button type="button" class="principale largo2" data-timer="sinc">Sincronizza</button><button type="button" data-timer="meno" aria-label="Un minuto in meno">−1′</button><button type="button" data-timer="piu" aria-label="Un minuto in più">+1′</button><button type="button" data-timer="ferma">Ferma</button>'
+      : '<button type="button" data-timer="avvia">Nuova partenza</button><button type="button" data-timer="ferma">Ferma</button>');
+  } else {
+    $("cr-tempo").textContent = testoCronometro(tempoCronometro(cr, adesso));
+    $("cr-avvia").textContent = cr.inizio !== null ? "Pausa" : crAttivo ? "Riprendi" : "Avvia";
+    $("cr-parziale").disabled = !crAttivo; $("cr-azzera").disabled = !crAttivo;
+    html("cr-parziali", [...cr.parziali].reverse().map((p, i, lista) => {
+      const n = cr.parziali.length - i, prec = cr.parziali[n - 2], daT = prec ? prec.totale : 0, daPos = prec ? prec.pos : cr.posAvvio;
+      const dt = (p.totale - daT) / 1000, d = p.pos && daPos ? distanceMeters(daPos, p.pos) : null;
+      return "<li><b>" + n + ". " + testoCronometro(p.totale) + "</b><span>+" + testoCronometro(p.totale - daT) + (d !== null ? " · " + Math.round(d) + " m · " + (dt > 0 ? numero(d / dt * 1.943844, 1) + " kn" : "—") : "") + "</span></li>";
+    }).join(""));
+  }
+}
+const posAdesso = () => fixVivo() ? {lat: st.fix.lat, lon: st.fix.lon} : null;
+function comandoCronometro(azione) {
+  const adesso = Date.now(), cr = s.cronometro;
+  if (azione === "avvia") {
+    if (cr.inizio === null && cr.accumulato === 0) cr.posAvvio = posAdesso();
+    s.cronometro = {...cr, ...avviaFerma(cr, adesso)};
+  } else if (azione === "parziale") {
+    cr.parziali.push({t: adesso, totale: tempoCronometro(cr, adesso), pos: posAdesso()});
+    suono("breve");
+  } else if (azione === "azzera") {
+    if (cr.parziali.length && !confirm("Azzerare il cronometro e i " + cr.parziali.length + " tempi parziali?")) return;
+    if (cr.parziali.length) evento("Cronometro azzerato: " + cr.parziali.map((p, i) => (i + 1) + ". " + testoCronometro(p.totale)).join(", "));
+    s.cronometro = nuovoCrono();
+  }
+  salvaPresto(); disegnaCrono(adesso);
+}
+
+// ---------------- Disegno del campo sulla mappa (v0.6) ----------------
+function daSchermo(p) {
+  const v = st.vc; if (!v) return null;
+  return {lat: v.c.lat + (v.H / 2 - p.y) * v.m / R * 180 / Math.PI, lon: v.c.lon + (p.x - v.W / 2) * v.m / (R * v.k) * 180 / Math.PI};
+}
+function boaVicina(p) {
+  const v = st.vc; if (!v) return null;
+  let migliore = null, dmin = 28;
+  for (const b of s.boe) {
+    if (!b.pos) continue;
+    const x = v.W / 2 + rad(b.pos.lon - v.c.lon) * R * v.k / v.m, y = v.H / 2 - rad(b.pos.lat - v.c.lat) * R / v.m, d = Math.hypot(x - p.x, y - p.y);
+    if (d < dmin) { dmin = d; migliore = b; }
+  }
+  return migliore;
+}
+function avviaDisegno() {
+  if (!st.centro) {
+    if (st.fix) st.centro = {lat: st.fix.lat, lon: st.fix.lon};
+    else if (s.boe.some(b => b.pos)) inquadraTutto();
+    else { avvisa("Avvia il GPS: il campo si disegna intorno alla barca."); return; }
+  }
+  st.disegno = {metti: "boa"}; st.segui = false; st.selezionata = null; st.annullaDisegno = [];
+  mostraVista("vista-nav"); disegnaBarra();
+  if (s.campo.modello !== "allenamento") avvisa("Campo di regata: le boe che aggiungi vanno inserite a mano nella sequenza (Regata → Cambia campo).");
+}
+function disegnaBarra() {
+  $("disegno-barra").hidden = !st.disegno;
+  if (!st.disegno) return;
+  document.querySelectorAll("[data-metti]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.metti === st.disegno.metti)));
+  const t = $("disegno-togli");
+  t.hidden = !st.selezionata; t.textContent = "Togli " + (st.selezionata || "");
+  $("disegno-annulla").disabled = !st.annullaDisegno.length;
+  $("disegno-aiuto").textContent = st.disegno.metti === "boa" ? "Tocca la mappa per mettere una boa; trascina una boa per spostarla; toccala per sceglierla."
+    : "Tocca la mappa dove mettere " + (st.disegno.metti === "CdR" ? "la barca CdR (estremo destro della linea, guardando il vento)." : "la boa P (estremo sinistro della linea, guardando il vento).");
+}
+function metti(punto) {
+  if (!punto) return;
+  const pos = {...punto, acc: null, t: Date.now(), fonte: "disegnata"}, cosa = st.disegno.metti;
+  if (cosa === "boa") {
+    const codice = prossimoCodice(s.boe);
+    st.annullaDisegno.push({tipo: "aggiungi", codice, sequenza: s.campo.sequenza});
+    s.boe.push({codice, nome: "Boa " + codice + " (virtuale)", tipo: "percorso", pos, storico: [], osservazioni: []});
+    st.selezionata = codice;
+    dopoDisegno("Boa virtuale " + codice, {aggiunta: codice});
+  } else {
+    let b = trovaBoa(s.boe, cosa);
+    if (b) st.annullaDisegno.push({tipo: "sposta", codice: b.codice, pos: b.pos ? {...b.pos} : null, sequenza: s.campo.sequenza});
+    else { b = {codice: cosa, nome: cosa === "CdR" ? "Battello comitato (virtuale)" : "Boa di partenza (virtuale)", tipo: "partenza", pos: null, storico: [], osservazioni: []}; st.annullaDisegno.push({tipo: "aggiungi", codice: cosa, sequenza: s.campo.sequenza}); s.boe.unshift(b); }
+    b.pos = pos;
+    // Messa la barca CdR si passa alla boa P, e viceversa finché manca.
+    if (cosa === "CdR" && !trovaBoa(s.boe, "P")?.pos) st.disegno.metti = "P";
+    else if (cosa === "P" && !trovaBoa(s.boe, "CdR")?.pos) st.disegno.metti = "CdR";
+    else st.disegno.metti = "boa";
+    dopoDisegno((cosa === "CdR" ? "Barca CdR" : "Boa P") + " virtuale");
+  }
+}
+function dopoDisegno(testo, modifica = {}) {
+  if (s.campo.modello === "allenamento") {
+    if (modifica.sequenza !== undefined) s.campo.sequenza = modifica.sequenza;
+    else s.campo.sequenza = aggiornaSequenza(s.campo.sequenza, s.boe, modifica);
+    s.tappa = Math.min(s.tappa, Math.max(0, tappe(s.campo.sequenza).length - 1));
+  }
+  if (testo) evento("Disegno: " + testo);
+  salvaPresto(); disegnaBarra(); aggiorna();
+}
+function annullaDisegno() {
+  const a = st.annullaDisegno.pop(); if (!a) return;
+  if (a.tipo === "aggiungi") s.boe = s.boe.filter(b => b.codice !== a.codice);
+  else if (a.tipo === "sposta") { const b = trovaBoa(s.boe, a.codice); if (b) b.pos = a.pos; }
+  else if (a.tipo === "togli") s.boe.splice(Math.min(a.indice, s.boe.length), 0, a.boa);
+  st.selezionata = null; dopoDisegno("annullato", {sequenza: a.sequenza});
+}
+function togliSelezionata() {
+  const i = s.boe.findIndex(b => b.codice === st.selezionata); if (i < 0) return;
+  st.annullaDisegno.push({tipo: "togli", boa: s.boe[i], indice: i, sequenza: s.campo.sequenza});
+  const codice = s.boe[i].codice; s.boe.splice(i, 1); st.selezionata = null;
+  dopoDisegno("tolta " + codice, {tolta: codice});
+}
+function fineDisegno() {
+  st.disegno = null; st.selezionata = null; disegnaBarra();
+  evento("Campo disegnato: " + s.campo.sequenza); salvaPresto(); modificato();
+  if (s.campo.modello !== "allenamento" && s.boe.some(b => b.pos?.fonte === "disegnata")) avvisa("Ricorda di controllare la sequenza in Regata → Cambia campo.");
+}
+
+// ---------------- Campi d'allenamento pronti ----------------
+function disegnaAllenamento() {
+  document.querySelectorAll("[data-tipo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tipo === st.tipoAllenamento)));
+  const sv = statoVento(), w = Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir;
+  if (document.activeElement !== $("all-vento") && $("all-vento").value === "" && Number.isFinite(w)) $("all-vento").value = String(Math.round(w));
+  const t = st.tipoAllenamento;
+  $("all-linea").disabled = t === "dueboe"; $("all-distanza").disabled = t === "partenza"; $("all-giri").disabled = t === "partenza" || t === "bolina";
+  $("all-nota").textContent = (Number.isFinite(w) ? "Vento tarato: " + angolo(w) + ". " : "Vento non tarato: scrivi da dove viene. ") +
+    {partenza: "Linea perpendicolare al vento, con il centro sulla barca.", bolina: "Linea con il centro sulla barca e boa 1 sopravvento; arrivo sulla linea.",
+     bastone: "Linea con il centro sulla barca, boa 1 sopravvento e boa 2 cinquanta metri sotto la linea; arrivo sulla linea.",
+     dueboe: "Boa 1 sopravvento e boa 2 dove si trova la barca."}[t];
+}
+function creaAllenamento() {
+  const vento = Number($("all-vento").value), lunghezza = Number($("all-linea").value), distanza = Number($("all-distanza").value), giri = Number($("all-giri").value);
+  if ($("all-vento").value === "" || !(vento >= 0 && vento <= 360)) { avvisa("Scrivi da dove viene il vento, da 0 a 359 gradi."); return; }
+  if (!(lunghezza >= 20 && lunghezza <= 1000)) { avvisa("Linea di partenza tra 20 e 1000 metri."); return; }
+  if (!(distanza >= 50 && distanza <= 5000)) { avvisa("Boa di bolina tra 50 e 5000 metri."); return; }
+  const centro = fixVivo() ? {lat: st.fix.lat, lon: st.fix.lon} : null;
+  if (!centro) { avvisa("Serve il GPS attivo: il campo si costruisce intorno alla barca."); return; }
+  const c = campoAllenamento(st.tipoAllenamento, {centro, vento, lunghezza, distanza, giri});
+  const conPosizioni = s.boe.filter(b => b.pos && b.pos.fonte !== "istruzioni" && b.pos.fonte !== "disegnata").map(b => b.codice);
+  if (!confirm("Sostituire il campo «" + s.campo.nome + "» con «" + c.nome + "»?" + (conPosizioni.length ? " Si perdono le posizioni GPS di " + conPosizioni.join(", ") + "." : ""))) return;
+  s.campo = {nome: c.nome, modello: "allenamento", sequenza: c.sequenza};
+  s.boe = c.boe; s.tappa = 0;
+  s.arrivo = {ugualePartenza: true, etichette: ["Battello CdR", "Boa di partenza"], estremi: {a: null, b: null}, taglio: null};
+  evento("Campo d'allenamento: " + c.nome + " · " + c.sequenza);
+  $("allenamento").open = false;
+  avvisa("Campo d'allenamento creato: " + c.sequenza + ". Puoi spostare le boe con «Disegna sulla mappa».");
+  modificato(); mostraVista("vista-nav"); inquadraTutto();
+}
+
 // ---------------- Azioni di regata ----------------
 const puntoGps = () => ({lat: st.fix.lat, lon: st.fix.lon, acc: Number.isFinite(st.fix.accuracy) ? Math.round(st.fix.accuracy) : null, t: Date.now(), fonte: "gps"});
 
@@ -485,6 +711,7 @@ function descriviFonte(ob) {
     case "gps": return "posizione GPS ±" + (ob.pos.acc ?? "?") + " m";
     case "triangolazione": return "posizione stimata da due rilevamenti";
     case "istruzioni": return "posizione indicativa dalle istruzioni";
+    case "disegnata": return "boa virtuale";
     case "linea": return "centro della linea";
     case "estremo": return "un solo estremo della linea";
     case "rilevamento": return "solo direzione · rilevamento a " + Math.round(ob.spostamento) + " m da qui";
@@ -531,7 +758,7 @@ function disegnaNav() {
     : !ob.tappa ? "Percorso completato" : "Tappa " + (s.tappa + 1) + " di " + lista.length + " · " + descriviFonte(ob);
   const boaTappa = !s.arrivo.taglio && ob.tappa?.tipo === "boa" && ob.boa;
   const ps = $("pr-segna"), pr = $("pr-rileva");
-  ps.hidden = !boaTappa;
+  ps.hidden = !boaTappa || ob.pos?.fonte === "disegnata"; // la boa virtuale non si segna col GPS
   ps.textContent = ob.pos?.fonte === "gps" ? "Aggiorna" : "Segna GPS";
   ps.dataset.codice = pr.dataset.codice = boaTappa ? ob.boa.codice : "";
   pr.hidden = !boaTappa || !!ob.pos; // la boa con posizione nota non ha bisogno di rilevamenti
@@ -627,6 +854,7 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
   const c = st.centro, k = Math.cos(rad(c.lat)), m = st.mpp;
   if (!st.origine) st.origine = {...c};
   const xy = p => ({x: W / 2 + rad(p.lon - c.lon) * R * k / m, y: H / 2 - rad(p.lat - c.lat) * R / m});
+  st.vc = {c: {...c}, k, m, W, H};
   const f1 = v => v.toFixed(1);
   const sc = scalaGrafica(m, Math.min(110, W * 0.28));
   let out = "";
@@ -670,10 +898,12 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
   const etichette = [];
   for (const b of s.boe) {
     if (!b.pos) continue;
-    const p = xy(b.pos), corrente = ob?.boa === b, certo = b.pos.fonte === "gps";
+    const p = xy(b.pos), corrente = ob?.boa === b, certo = b.pos.fonte === "gps", virtuale = b.pos.fonte === "disegnata";
     if (corrente) out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="17" fill="none" stroke="#ff0000" stroke-width="3"/>';
-    out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="9" fill="' + (certo ? "#fff" : "#101010") + '" stroke="' + (certo ? "#ff0000" : "#fff") + '" stroke-width="2.5"/>';
-    etichette.push({x: p.x + 13, y: p.y - 13, testo: b.codice + (certo ? "" : b.pos.fonte === "istruzioni" ? " (IdR)" : " ~")});
+    if (st.disegno && st.selezionata === b.codice) out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="22" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="5 4"/>';
+    out += virtuale ? '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="9" fill="#000" stroke="#ff0000" stroke-width="3" stroke-dasharray="4 3"/>'
+      : '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="9" fill="' + (certo ? "#fff" : "#101010") + '" stroke="' + (certo ? "#ff0000" : "#fff") + '" stroke-width="2.5"/>';
+    etichette.push({x: p.x + 13, y: p.y - 13, testo: b.codice + (certo || virtuale ? "" : b.pos.fonte === "istruzioni" ? " (IdR)" : " ~")});
   }
   if (ob && (ob.fonte === "linea" || ob.fonte === "estremo") && ob.pos) { const p = xy(ob.pos); out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="15" fill="none" stroke="#ff0000" stroke-width="3"/>'; }
   if (s.arrivo.taglio?.lat != null) { const p = xy(s.arrivo.taglio); out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="7" fill="#fff"/><circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="16" fill="none" stroke="#fff" stroke-width="2.5"/>'; }
@@ -724,11 +954,23 @@ function inquadraTutto() {
 }
 const carta = $("carta"), puntatori = new Map();
 const puntoSvg = e => { const r = carta.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; };
-carta.addEventListener("pointerdown", e => { carta.setPointerCapture(e.pointerId); puntatori.set(e.pointerId, puntoSvg(e)); carta.classList.add("trascina"); });
+carta.addEventListener("pointerdown", e => {
+  carta.setPointerCapture(e.pointerId); const p = puntoSvg(e);
+  puntatori.set(e.pointerId, p); carta.classList.add("trascina");
+  if (st.disegno && puntatori.size === 1) { st.tocco = {x: p.x, y: p.y, t: Date.now(), mosso: 0}; const b = boaVicina(p); st.trascina = b ? {codice: b.codice, prima: {...b.pos}, mossa: false} : null; }
+  else { st.tocco = null; st.trascina = null; }
+});
 carta.addEventListener("pointermove", e => {
   if (!puntatori.has(e.pointerId) || !st.centro) return;
   const prima = [...puntatori.values()], vecchio = puntatori.get(e.pointerId), nuovo = puntoSvg(e);
   puntatori.set(e.pointerId, nuovo);
+  if (st.tocco) st.tocco.mosso += Math.hypot(nuovo.x - vecchio.x, nuovo.y - vecchio.y);
+  if (st.disegno && st.trascina && puntatori.size === 1) {
+    if (st.tocco?.mosso <= 6) return;
+    const b = trovaBoa(s.boe, st.trascina.codice);
+    if (b) { b.pos = {...daSchermo(nuovo), acc: null, t: Date.now(), fonte: "disegnata"}; st.trascina.mossa = true; st.selezionata = b.codice; aggiorna(); }
+    return;
+  }
   const dopo = [...puntatori.values()];
   if (dopo.length === 1) {
     const dx = nuovo.x - vecchio.x, dy = nuovo.y - vecchio.y;
@@ -743,7 +985,17 @@ carta.addEventListener("pointermove", e => {
   }
   aggiorna();
 });
-const rilascia = e => { puntatori.delete(e.pointerId); if (!puntatori.size) carta.classList.remove("trascina"); };
+const rilascia = e => {
+  const p = puntatori.get(e.pointerId);
+  puntatori.delete(e.pointerId); if (!puntatori.size) carta.classList.remove("trascina");
+  if (!st.disegno || e.type === "pointercancel") { st.tocco = null; st.trascina = null; return; }
+  if (st.trascina?.mossa) { st.annullaDisegno.push({tipo: "sposta", codice: st.trascina.codice, pos: st.trascina.prima, sequenza: s.campo.sequenza}); dopoDisegno("Spostata " + st.trascina.codice); }
+  else if (st.tocco && p && st.tocco.mosso < 8 && Date.now() - st.tocco.t < 800) {
+    if (st.trascina) { st.selezionata = st.selezionata === st.trascina.codice ? null : st.trascina.codice; disegnaBarra(); aggiorna(); }
+    else metti(daSchermo(p));
+  }
+  st.tocco = null; st.trascina = null;
+};
 carta.addEventListener("pointerup", rilascia);
 carta.addEventListener("pointercancel", rilascia);
 carta.addEventListener("wheel", e => { e.preventDefault(); const p = puntoSvg(e); zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, p.x, p.y); }, {passive: false});
@@ -785,6 +1037,8 @@ function disegnaVento() {
   if (document.activeElement !== $("imp-virata")) $("imp-virata").value = String(s.barca.angoloVirata);
   $("imp-audio").setAttribute("aria-pressed", String(v.imp.audio));
   $("imp-audio").textContent = "Suono dell'allarme: " + (v.imp.audio ? "sì" : "no");
+  $("imp-dieci").setAttribute("aria-pressed", String(s.timer.ultimi10));
+  $("imp-dieci").textContent = "Timer: beep negli ultimi 10 secondi: " + (s.timer.ultimi10 ? "sì" : "no");
 }
 function disegnaGraficoVento(adesso, medio) {
   const svg = $("grafico-vento"), W = svg.clientWidth, H = svg.clientHeight;
@@ -805,6 +1059,7 @@ function statoBoa(b) {
   if (b.pos?.fonte === "gps") return {testo: "GPS ±" + (b.pos.acc ?? "?") + " m · " + oraBreve(b.pos.t), classe: "gps"};
   if (b.pos?.fonte === "triangolazione") return {testo: "stimata da " + b.osservazioni.length + " rilevamenti", classe: ""};
   if (b.pos?.fonte === "istruzioni") return {testo: "indicativa, dalle istruzioni", classe: ""};
+  if (b.pos?.fonte === "disegnata") return {testo: "virtuale, disegnata", classe: ""};
   const n = b.osservazioni.length;
   return {testo: n ? n + (n === 1 ? " rilevamento" : " rilevamenti") + " · posizione ignota" : "posizione ignota", classe: ""};
 }
@@ -970,7 +1225,8 @@ $("btn-nuova").addEventListener("click", () => {
   if (!confirm("Iniziare una nuova sessione? Restano il campo e le posizioni indicate dalle istruzioni; si cancellano boe rilevate, arrivo, traccia e registro. Esporta prima se vuoi conservarli.")) return;
   const campo = s.campo, boe = s.boe, barcaDati = s.barca, impVento = s.vento.imp;
   s = nuovaSessione(campo.modello);
-  s.barca = barcaDati; s.vento = nuovoVento(impVento); st.allScarso = null;
+  const dieci = s.timer.ultimi10;
+  s.barca = barcaDati; s.vento = nuovoVento(impVento); st.allScarso = null; s.timer = nuovoTimer(dieci);
   s.campo = {...campo};
   s.boe = boe.map(b => ({...b, pos: b.pos?.fonte === "istruzioni" ? b.pos : null, storico: [], osservazioni: []}));
   evento("Nuova sessione · " + campo.nome); avvisa("Nuova sessione iniziata."); modificato();
@@ -1059,6 +1315,26 @@ $("pol-azzera").addEventListener("click", () => {
   pol = {...nuovePolari(), vele: pol.vele, imp: pol.imp, vento: pol.vento}; st.polRegistra = false;
   evento("Polari cancellate"); salvaPolari(true); modificato();
 });
+
+// Timer, cronometro, disegno, campi d'allenamento
+$("btn-crono").addEventListener("click", () => { st.cronoAperto = !st.cronoAperto; disegnaCrono(); });
+$("crono-chiudi").addEventListener("click", () => { st.cronoAperto = false; disegnaCrono(); });
+$("crono-pillola").addEventListener("click", () => { st.cronoAperto = true; st.cronoModo = Number.isFinite(s.timer.zero) ? "timer" : "cronometro"; disegnaCrono(); });
+document.querySelectorAll("[data-modo]").forEach(b => b.addEventListener("click", () => { st.cronoModo = b.dataset.modo; disegnaCrono(); }));
+$("timer-comandi").addEventListener("click", e => { const b = e.target.closest("[data-timer]"); if (b) comandoTimer(b.dataset.timer); });
+$("cr-avvia").addEventListener("click", () => comandoCronometro("avvia"));
+$("cr-parziale").addEventListener("click", () => comandoCronometro("parziale"));
+$("cr-azzera").addEventListener("click", () => comandoCronometro("azzera"));
+$("imp-dieci").addEventListener("click", () => { s.timer.ultimi10 = !s.timer.ultimi10; if (s.timer.ultimi10) suono("breve"); salvaPresto(); disegnaVento(); });
+$("btn-disegna").addEventListener("click", avviaDisegno);
+document.querySelectorAll("[data-metti]").forEach(b => b.addEventListener("click", () => { st.disegno.metti = b.dataset.metti; disegnaBarra(); }));
+$("disegno-annulla").addEventListener("click", annullaDisegno);
+$("disegno-togli").addEventListener("click", togliSelezionata);
+$("disegno-fine").addEventListener("click", fineDisegno);
+$("all-tipo").addEventListener("click", e => { const b = e.target.closest("[data-tipo]"); if (b) { st.tipoAllenamento = b.dataset.tipo; disegnaAllenamento(); } });
+$("allenamento").addEventListener("toggle", () => { if ($("allenamento").open) { $("all-vento").value = ""; disegnaAllenamento(); } });
+$("all-crea").addEventListener("click", creaAllenamento);
+setInterval(tickTimer, 200);
 
 setInterval(aggiorna, 1000);
 setInterval(() => { if (st.vista === "vista-regata") disegnaVento(); }, 2000);

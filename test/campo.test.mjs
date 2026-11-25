@@ -85,3 +85,40 @@ test("sessioni delle versioni precedenti ricevono vento e dati della barca", () 
   assert.equal(v.vento.imp.soglia, 6); assert.deepEqual(v.vento.rif, {dritta: null, sinistra: null});
   assert.equal(v.barca.lunghezza, 10); assert.deepEqual(v.registro, []);
 });
+
+import {campoAllenamento, sequenzaDisegnata, prossimoCodice} from "../js/campo.mjs";
+import {distanceMeters as dm, bearing as br} from "../js/engine.mjs";
+test("campi d'allenamento intorno alla barca e orientati sul vento", () => {
+  const centro = {lat: 44.15, lon: 8.3};
+  const c = campoAllenamento("bastone", {centro, vento: 200, lunghezza: 120, distanza: 500, giri: 2, adesso: 5});
+  assert.equal(c.sequenza, "S - 1 - 2 - 1 - 2 - F");
+  const [cdr, p, uno, due] = c.boe;
+  assert.ok(Math.abs(dm(cdr.pos, p.pos) - 120) < 0.5);
+  assert.ok(Math.abs(br(p.pos, cdr.pos) - 290) < 0.5, "CdR a destra guardando il vento");
+  assert.ok(Math.abs(dm(centro, uno.pos) - 500) < 0.5 && Math.abs(br(centro, uno.pos) - 200) < 0.5);
+  assert.ok(Math.abs(br(centro, due.pos) - 20) < 0.5);
+  assert.equal(uno.pos.fonte, "disegnata");
+  assert.equal(campoAllenamento("partenza", {centro, vento: 0}).sequenza, "S");
+  assert.equal(campoAllenamento("dueboe", {centro, vento: 0, giri: 3}).sequenza, "1 - 2 - 1 - 2 - 1 - 2");
+  assert.throws(() => campoAllenamento("triangolo", {centro, vento: 0}));
+});
+test("sequenza del campo disegnato e codici nuovi", () => {
+  const pos = {lat: 44, lon: 8};
+  const boe = [{codice: "CdR", tipo: "partenza", pos}, {codice: "P", tipo: "partenza", pos: null}, {codice: "1", tipo: "percorso", pos}, {codice: "3", tipo: "percorso", pos}];
+  assert.equal(sequenzaDisegnata(boe), "1 - 3");
+  boe[1].pos = pos;
+  assert.equal(sequenzaDisegnata(boe), "S - 1 - 3 - F");
+  assert.equal(prossimoCodice(boe), "2");
+});
+import {aggiornaSequenza} from "../js/campo.mjs";
+test("disegno: la boa nuova va prima dell'arrivo e i giri restano", () => {
+  const pos = {lat: 44, lon: 8};
+  const boe = [{codice: "CdR", pos}, {codice: "P", pos}, {codice: "1", pos}, {codice: "2", pos}, {codice: "3", pos}];
+  assert.equal(aggiornaSequenza("S - 1 - 2 - 1 - 2 - F", boe, {aggiunta: "3"}), "S - 1 - 2 - 1 - 2 - 3 - F");
+  assert.equal(aggiornaSequenza("S - 1 - 2 - 1 - 2 - F", boe, {tolta: "2"}), "S - 1 - 1 - F");
+  assert.equal(aggiornaSequenza("1 - 2", boe, {}), "S - 1 - 2 - F", "linea completata: partenza e arrivo");
+  assert.equal(aggiornaSequenza("S - (D) - 1 - F", boe, {aggiunta: "3"}), "S - (D) - 1 - 3 - F");
+  assert.equal(aggiornaSequenza("S - 1 - F", [{codice: "CdR", pos}, {codice: "1", pos}], {}), "1", "senza linea niente partenza");
+  assert.equal(aggiornaSequenza("S", boe, {aggiunta: "1"}), "S - 1 - F");
+  assert.equal(aggiornaSequenza("S - 1 - F", boe, {tolta: "1"}), "S");
+});

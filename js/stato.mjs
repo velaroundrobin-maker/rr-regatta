@@ -1,5 +1,5 @@
 // Sessione di regata: creazione, cambio modello senza perdere le posizioni, salvataggio e verifica dei file.
-import {MODELLI} from "./campo.mjs?v=0.5.1";
+import {MODELLI} from "./campo.mjs?v=0.6";
 
 export const CHIAVE = "rr-regatta-sessione-v1";
 const copia = x => JSON.parse(JSON.stringify(x));
@@ -13,9 +13,12 @@ export function nuovaSessione(modello = "loano-1", adesso = Date.now()) {
     boe: m.boe.map(nuovaBoa), tappa: 0,
     arrivo: {ugualePartenza: m.arrivo.ugualePartenza, etichette: [...m.arrivo.etichette], estremi: {a: null, b: null}, taglio: null},
     eventi: [], traccia: [], registro: [],
-    vento: nuovoVento(), barca: {lunghezza: 10, angoloVirata: 90}
+    vento: nuovoVento(), barca: {lunghezza: 10, angoloVirata: 90},
+    timer: nuovoTimer(), cronometro: nuovoCrono()
   };
 }
+export const nuovoTimer = (ultimi10 = false) => ({zero: null, ultimi10, partenza: null});
+export const nuovoCrono = () => ({inizio: null, accumulato: 0, parziali: [], posAvvio: null});
 export function nuovoVento(imp) {
   return {iniziale: null, rif: {dritta: null, sinistra: null}, campioni: [], rotazione: null, bolina: false,
     imp: {soglia: 6, durataS: 20, mediaMin: 5, audio: true, ...(imp || {})}};
@@ -53,6 +56,8 @@ export function verifica(obj) {
   obj.vento = {...v, ...(obj.vento || {}), rif: {...v.rif, ...(obj.vento?.rif || {})}, imp: v.imp};
   obj.vento.campioni ??= [];
   obj.barca = {lunghezza: 10, angoloVirata: 90, ...(obj.barca || {})};
+  obj.timer = {...nuovoTimer(), ...(obj.timer || {})};
+  obj.cronometro = {...nuovoCrono(), ...(obj.cronometro || {})};
   for (const b of obj.boe) { b.storico ??= []; b.osservazioni ??= []; b.pos ??= null; }
   return obj;
 }

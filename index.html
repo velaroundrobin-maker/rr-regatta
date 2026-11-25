@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.5.1">
+<link rel="stylesheet" href="./app.css?v=0.6">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.5.1</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.6</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
@@ -62,12 +62,50 @@
         <div><strong id="allarme-titolo">SCARSO</strong><span id="allarme-testo">—</span></div>
         <button type="button" id="allarme-ok">Visto</button>
       </div>
+      <div class="crono" id="crono" hidden>
+        <div class="crono-testa">
+          <div class="segmento crono-modo" role="group" aria-label="Timer o cronometro">
+            <button type="button" data-modo="timer" aria-pressed="true">Partenza</button>
+            <button type="button" data-modo="cronometro" aria-pressed="false">Cronometro</button>
+          </div>
+          <button type="button" class="crono-chiudi" id="crono-chiudi" aria-label="Riduci">×</button>
+        </div>
+        <div id="crono-timer">
+          <output class="crono-tempo" id="timer-tempo">−5:00</output>
+          <p class="crono-info" id="timer-info">—</p>
+          <div class="crono-comandi" id="timer-comandi"></div>
+        </div>
+        <div id="crono-cronometro" hidden>
+          <output class="crono-tempo" id="cr-tempo">0:00,0</output>
+          <div class="crono-comandi">
+            <button type="button" class="principale" id="cr-avvia">Avvia</button>
+            <button type="button" id="cr-parziale">Parziale</button>
+            <button type="button" id="cr-azzera">Azzera</button>
+          </div>
+          <ol class="parziali" id="cr-parziali"></ol>
+        </div>
+      </div>
+      <button type="button" class="crono-pillola" id="crono-pillola" hidden>—</button>
+      <div class="disegno-barra" id="disegno-barra" hidden>
+        <p id="disegno-aiuto">Tocca la mappa per mettere una boa; trascina una boa per spostarla.</p>
+        <div class="disegno-comandi">
+          <div class="segmento" role="group" aria-label="Cosa mettere">
+            <button type="button" data-metti="boa" aria-pressed="true">Boa</button>
+            <button type="button" data-metti="CdR" aria-pressed="false">CdR</button>
+            <button type="button" data-metti="P" aria-pressed="false">P</button>
+          </div>
+          <button type="button" id="disegno-togli" hidden>Togli</button>
+          <button type="button" id="disegno-annulla" aria-label="Annulla l'ultima modifica">↶</button>
+          <button type="button" class="principale" id="disegno-fine">Fine</button>
+        </div>
+      </div>
       <div class="riquadro-pos" id="riquadro-pos" hidden><span id="lat">—</span><span id="lon">—</span><small id="precisione">—</small></div>
       <div class="comandi-mappa">
         <button type="button" id="zoom-piu" aria-label="Ingrandisci">+</button>
         <button type="button" id="zoom-meno" aria-label="Riduci">−</button>
         <button type="button" id="tutto" class="testo" aria-label="Inquadra barca e boe">Tutto</button>
         <button type="button" id="segui" class="testo" aria-label="Centra sulla barca e seguila">Barca</button>
+        <button type="button" id="btn-crono" class="testo" aria-label="Timer di partenza e cronometro">Crono</button>
       </div>
     </section>
 
@@ -107,6 +145,25 @@
       <p class="aiuto" id="campo-titolo">—</p>
       <ol class="tappe" id="lista-tappe"></ol>
       <p class="aiuto">Tocca una tappa per farla diventare la prossima.</p>
+      <details class="configura allenamento" id="allenamento">
+        <summary>Campo d'allenamento (boe virtuali)</summary>
+        <p class="aiuto">Per gli esercizi senza boe vere: l'app costruisce il campo intorno alla barca, orientato sul vento. Le boe sono virtuali e la navigazione funziona come in regata. Dopo puoi spostarle o aggiungerne con «Disegna sulla mappa».</p>
+        <div class="scelte due" id="all-tipo">
+          <button type="button" data-tipo="partenza" aria-pressed="true">Solo partenza</button>
+          <button type="button" data-tipo="bolina" aria-pressed="false">Partenza e bolina</button>
+          <button type="button" data-tipo="bastone" aria-pressed="false">Bastone</button>
+          <button type="button" data-tipo="dueboe" aria-pressed="false">Due boe</button>
+        </div>
+        <div class="riga-campi tre">
+          <label>Vento da (gradi) <input id="all-vento" type="number" inputmode="numeric" min="0" max="359"></label>
+          <label>Linea (m) <input id="all-linea" type="number" inputmode="numeric" min="20" max="1000" value="100"></label>
+          <label>Bolina (m) <input id="all-distanza" type="number" inputmode="numeric" min="50" max="5000" value="400"></label>
+        </div>
+        <label class="campo-scelta">Giri <select id="all-giri"><option>1</option><option>2</option><option>3</option></select></label>
+        <p class="aiuto" id="all-nota">—</p>
+        <button type="button" class="principale largo" id="all-crea">Crea il campo intorno alla barca</button>
+      </details>
+      <button type="button" class="secondario largo" id="btn-disegna">Disegna sulla mappa</button>
     </section>
     <section class="blocco">
       <details class="configura" id="configura">
@@ -180,6 +237,7 @@
         <label>Angolo di virata tipico <input id="imp-virata" type="number" inputmode="numeric" min="60" max="130"> gradi</label>
       </div>
       <button type="button" class="interruttore" id="imp-audio" aria-pressed="true">Suono dell'allarme: sì</button>
+      <button type="button" class="interruttore" id="imp-dieci" aria-pressed="false">Timer: beep negli ultimi 10 secondi: no</button>
       <p class="aiuto">L'angolo di virata tipico si usa solo finché non avete registrato le boline sulle due mure.</p>
     </section>
   </main>
@@ -302,6 +360,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.5.1"></script>
+<script type="module" src="./js/app.mjs?v=0.6"></script>
 </body>
 </html>
