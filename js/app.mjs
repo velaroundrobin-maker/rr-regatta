@@ -1,11 +1,13 @@
 // RR Regatta · v0.3: navigazione GPS, campo di regata, boe, rilevamenti, arrivo, salvataggio.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.3.1";
-import {markVMC, norm} from "./engine.mjs?v=0.3.1";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.3.1";
-import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.3.1";
-import {nuovaSessione, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.3.1";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.4";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.4";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.4";
+import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.4";
+import {nuovaSessione, nuovoVento, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.4";
+import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.4";
 
-const VERSIONE = "0.3.1";
+const VERSIONE = "0.4";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -40,7 +42,8 @@ const st = {
   fix: null, fixes: [], origine: null,
   segui: true, centro: null, mpp: 1.2,
   mostraTraccia: false, vuoleSchermo: false, wakeLock: null,
-  vista: "vista-nav", rilievo: {codice: null, lato: -1}
+  vista: "vista-nav", rilievo: {codice: null, lato: -1},
+  mura: null, ultimaVirata: 0, stima: null, bs: null, allScarso: null, poggiataDa: null, ultimoRegistro: 0, audio: null
 };
 const gpsAttivo = () => st.watch !== null;
 const fixVivo = () => gpsAttivo() && st.fix && Date.now() - st.fix.received <= 5000;
@@ -91,6 +94,7 @@ function puntoRicevuto(pos, sessione) {
     s.traccia.push({lat: +fix.lat.toFixed(6), lon: +fix.lon.toFixed(6), t: adesso});
     if (s.traccia.length > 5000) s.traccia.shift();
   }
+  elaboraVento(fix, adesso);
   aggiorna();
 }
 function erroreGps(err, sessione) {
@@ -102,6 +106,108 @@ function erroreGps(err, sessione) {
 }
 const metri = (a, b) => Math.hypot(rad(b.lon - a.lon) * R * Math.cos(rad(a.lat)), rad(b.lat - a.lat) * R);
 setInterval(() => { if (gpsAttivo()) salva(memoria, s); }, 15000); // traccia salvata periodicamente
+
+// ---------------- Vento (Fase 3) ----------------
+const tar = () => taratura({...s.vento, angoloVirata: s.barca.angoloVirata});
+const opzioniVento = t => ({mediaMs: s.vento.imp.mediaMin * 60000, tarDir: t.dir});
+function statoVento(adesso = Date.now()) { const t = tar(); return {tar: t, ...analisiVento(s.vento.campioni, adesso, opzioniVento(t))}; }
+
+function elaboraVento(fix, adesso) {
+  const t = tar();
+  const prima = analisiVento(s.vento.campioni, adesso, opzioniVento(t));
+  const rs = rottaStabile(st.fixes, adesso);
+  // Mura dalla rotta e dal vento; il cambio di mura è una virata.
+  const mura = Number.isFinite(prima.medio) && Number.isFinite(fix.cog) && fix.sog >= 1.5 ? muraDa(fix.cog, prima.medio) : null;
+  if (mura && st.mura && mura !== st.mura) { st.ultimaVirata = adesso; if (s.vento.bolina) evento("Virata: ora mure a " + mura); }
+  if (mura) st.mura = mura;
+  const stima = stimaDaBolina({cog: rs.cog, bolina: s.vento.bolina, tar: t, dirAttuale: prima.medio, ultimaVirata: st.ultimaVirata, adesso});
+  st.stima = rs.cog === null && s.vento.bolina && t.off ? {...stima, motivo: rs.motivo === "velocità bassa" ? "velocità bassa" : "rotta non stabile"} : stima;
+  if (stima.dir !== null) {
+    s.vento.campioni.push({t: adesso, dir: +stima.dir.toFixed(1), mura: stima.mura});
+    while (s.vento.campioni.length && adesso - s.vento.campioni[0].t > 4 * 3600000) s.vento.campioni.shift();
+  }
+  // Se la barca ha poggiato a lungo, la bolina stretta si spegne da sola.
+  if (s.vento.bolina && stima.motivo === "barca poggiata") {
+    st.poggiataDa ??= adesso;
+    if (adesso - st.poggiataDa > 30000) { s.vento.bolina = false; st.poggiataDa = null; evento("Bolina stretta terminata: la barca ha poggiato"); avvisa("Bolina stretta disattivata: la barca ha poggiato."); salvaPresto(); }
+  } else st.poggiataDa = null;
+  // Salto, buono/scarso e allarmi.
+  const an = analisiVento(s.vento.campioni, adesso, opzioniVento(t));
+  st.bs = buonoScarso(an.salto, stima.mura ?? st.mura);
+  const eraAttivo = st.allScarso?.attivo;
+  st.allScarso = aggiornaAllarmeScarso(st.allScarso, {bs: st.bs, valido: stima.dir !== null, adesso, soglia: s.vento.imp.soglia, durataMs: s.vento.imp.durataS * 1000});
+  if (!eraAttivo && st.allScarso.attivo) { evento("ALLARME scarso di " + Math.round(st.allScarso.gradi) + "° (mure a " + st.mura + ", vento medio " + angolo(an.medio) + ")"); segnale(); }
+  const eraRot = s.vento.rotazione?.attivo;
+  // Il riferimento della rotazione si fissa solo con almeno 4 minuti di stime (evita falsi allarmi subito dopo la taratura).
+  s.vento.rotazione = aggiornaAllarmeRotazione(s.vento.rotazione, {medio: an.nMedia >= 60 && an.copertura * s.vento.imp.mediaMin >= 4 ? an.medio : null, adesso, soglia: Math.max(8, s.vento.imp.soglia)});
+  if (!eraRot && s.vento.rotazione.attivo) { evento("ALLARME rotazione del vento medio di " + Math.round(s.vento.rotazione.rotazione) + "°"); segnale(); }
+  // Registro dati per l'analisi dopo l'uscita: un punto ogni 2 secondi.
+  if (adesso - st.ultimoRegistro >= 2000) {
+    st.ultimoRegistro = adesso;
+    s.registro.push([adesso, +fix.lat.toFixed(6), +fix.lon.toFixed(6), Number.isFinite(fix.sog) ? +fix.sog.toFixed(2) : null,
+      Number.isFinite(fix.cog) ? Math.round(fix.cog) : null, Number.isFinite(fix.accuracy) ? Math.round(fix.accuracy) : null, s.vento.bolina ? 1 : 0]);
+    if (s.registro.length > 15000) s.registro.shift();
+  }
+}
+
+// Suono e vibrazione dell'allarme. Il suono si sblocca al primo tocco sullo schermo (regola dei browser).
+document.addEventListener("pointerdown", () => {
+  try { const C = window.AudioContext || window.webkitAudioContext; if (C && !st.audio) st.audio = new C(); st.audio?.resume(); } catch {}
+}, {once: false, passive: true});
+function segnale() {
+  try { navigator.vibrate?.([400, 150, 400, 150, 400]); } catch {}
+  if (!s.vento.imp.audio || !st.audio) return;
+  try {
+    const a = st.audio, t0 = a.currentTime + 0.02;
+    for (let i = 0; i < 3; i++) {
+      const o = a.createOscillator(), g = a.createGain(), t = t0 + i * 0.32;
+      o.type = "square"; o.frequency.value = i % 2 ? 660 : 880;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.27);
+    }
+  } catch {}
+}
+
+function rottaPerTaratura() {
+  if (!fixVivo()) { avvisa("Serve il GPS attivo con una posizione recente."); return null; }
+  const r = rottaStabile(st.fixes, Date.now(), {finestraMs: 10000, maxDispersione: 8});
+  if (r.cog === null) { avvisa("Rotta non ancora utilizzabile (" + r.motivo + "): tieni la rotta costante, sopra 1,5 nodi, per una decina di secondi e riprova."); return null; }
+  return r.cog;
+}
+function taraMotore() {
+  const c = rottaPerTaratura(); if (c === null) return;
+  if (s.vento.iniziale && !confirm("Sostituire il vento di riferimento " + angolo(s.vento.iniziale.dir) + " con " + angolo(c) + "? Le stime raccolte finora verranno azzerate.")) return;
+  s.vento.iniziale = {dir: Math.round(c), metodo: "motore", t: Date.now()};
+  s.vento.campioni = []; s.vento.rotazione = null;
+  evento("Vento a motore: " + angolo(c)); avvisa("Vento di riferimento registrato: " + angolo(c) + "."); modificato();
+}
+function taraBolina(mura) {
+  const c = rottaPerTaratura(); if (c === null) return;
+  const t = tar();
+  if (t.dir !== null) {
+    const ang = Math.abs(delta(c, t.dir)), m = muraDa(c, t.dir);
+    if (ang < 15 || ang > 80) { avvisa("La rotta " + angolo(c) + " è a " + Math.round(ang) + "° dal vento di riferimento " + angolo(t.dir) + ": non sembra una bolina stretta. Controlla il vento o la rotta."); return; }
+    if (m !== mura && !confirm("Con il vento a " + angolo(t.dir) + " la rotta " + angolo(c) + " risulta mure a " + m + ". Registrarla comunque come mure a " + mura + "?")) return;
+  }
+  s.vento.rif[mura] = {cog: Math.round(c), t: Date.now()};
+  s.vento.bolina = true;
+  const t2 = tar();
+  evento("Bolina mure a " + mura + ": " + angolo(c));
+  avvisa("Bolina mure a " + mura + " registrata: " + angolo(c) + "." + (t2.misurato ? " Angolo di virata misurato: " + Math.round(t2.angoloVirata) + "°." : " Ora registra l'altra mura."));
+  modificato();
+}
+function taraMano() {
+  const v = Number($("tar-mano").value);
+  if (!Number.isFinite(v) || $("tar-mano").value === "" || v < 0 || v > 360) { avvisa("Scrivi la direzione da cui viene il vento, da 0 a 359 gradi."); return; }
+  s.vento.iniziale = {dir: norm(Math.round(v)), metodo: "a mano", t: Date.now()};
+  s.vento.campioni = []; s.vento.rotazione = null; $("tar-mano").value = "";
+  evento("Vento impostato a mano: " + angolo(v)); avvisa("Vento di riferimento: " + angolo(v) + "."); modificato();
+}
+function azzeraTaratura() {
+  if (!confirm("Azzerare vento di riferimento, boline registrate e stime raccolte?")) return;
+  s.vento = nuovoVento(s.vento.imp); st.allScarso = null;
+  evento("Taratura del vento azzerata"); modificato();
+}
 
 // ---------------- Azioni di regata ----------------
 const puntoGps = () => ({lat: st.fix.lat, lon: st.fix.lon, acc: Number.isFinite(st.fix.accuracy) ? Math.round(st.fix.accuracy) : null, t: Date.now(), fonte: "gps"});
@@ -235,8 +341,8 @@ function disegnaNav() {
   $("cog").textContent = mostra && nav.cog !== null ? angolo(nav.cog) : "—";
   const nota = !attivo ? "GPS fermo" : !st.fix ? "in attesa del GPS" : dato === "vecchio" ? "dato vecchio · " + sec + " s" : dato === "perso" ? "segnale perso" : null;
   const fonte = st.fix?.fonte || {};
-  $("nota-sog").textContent = nota ?? (nav.sog === null ? "in calcolo…" : "media 3 s · " + fonte.sog);
-  $("nota-cog").textContent = nota ?? (nav.cog === null ? "barca ferma o lenta" : "media 3 s · " + fonte.cog);
+  $("nota-sog").textContent = nota ?? (nav.sog === null ? "in calcolo…" : fonte.sog === "telefono" ? "dal telefono" : "calcolata");
+  $("nota-cog").textContent = nota ?? (nav.cog === null ? "barca ferma" : fonte.cog === "telefono" ? "dal telefono" : "calcolata");
   $("cella-sog").classList.toggle("vecchio", vecchio);
   $("cella-cog").classList.toggle("vecchio", vecchio);
 
@@ -260,11 +366,66 @@ function disegnaNav() {
   ps.dataset.codice = pr.dataset.codice = boaTappa ? ob.boa.codice : "";
   pr.hidden = !boaTappa || !!ob.pos; // la boa con posizione nota non ha bisogno di rilevamenti
 
+  // Vento stimato e salto
+  const sv = statoVento(adesso), W = sv.medio, off = sv.tar.off;
+  $("vento").textContent = Number.isFinite(W) ? angolo(W) : "—";
+  const nv = $("nota-vento"), campiona = mostra && st.stima?.dir != null;
+  nv.className = "nota" + (campiona && st.bs?.tipo === "scarso" ? " scarso" : "");
+  nv.textContent = !Number.isFinite(W) ? "da tarare"
+    : campiona && st.bs ? (st.bs.tipo === "pari" ? "salto 0°" : st.bs.tipo.toUpperCase() + " " + Math.round(st.bs.gradi) + "°")
+    : sv.nMedia ? "media " + s.vento.imp.mediaMin + " min" : "riferimento";
+
+  // Tattica: lato favorito della linea, bordo favorevole, lay-line
+  const tattica = []; let forte = false;
+  if (s.tappa === 0 && !s.arrivo.taglio && Number.isFinite(W)) {
+    const lp = lineaPartenza(s.boe), lf = lp && latoFavorito(lp[0], lp[1], W);
+    const vicino = lp && barca && distanceMeters(barca, {lat: (lp[0].lat + lp[1].lat) / 2, lon: (lp[0].lon + lp[1].lon) / 2}) < 500;
+    if (lf && vicino) tattica.push(lf.favorito === "neutra" ? "Linea neutra" : "Linea: favorita " + (lf.favorito === "P" ? "la boa P" : "la barca CdR") + " di " + Math.round(lf.vantaggio) + " m");
+  }
+  if (off && Number.isFinite(W) && rlv !== null && barca && !s.arrivo.taglio) {
+    const bf = bordoFavorevole(rlv, W, off);
+    if (bf?.mura === null) {
+      // Boa fuori dal settore di bolina: o la si raggiunge sulla mura attuale, o si è già oltre la lay-line dell'altra mura.
+      const d = delta(rlv, W), oltre = st.mura === "sinistra" ? d < off.dritta : st.mura === "dritta" ? d > off.sinistra : false;
+      if (oltre) { tattica.push("Oltre la lay-line: vira e poggia sulla boa"); forte = true; }
+      else tattica.push("Boa raggiungibile senza virare");
+    }
+    else if (bf) {
+      let txt = bf.vantaggio < 2 ? "Bordi equivalenti" : "Favorite mure a " + bf.mura + " (+" + Math.round(bf.vantaggio) + "°)";
+      if (ob.pos && st.mura) {
+        const rotta = rotteDiBolina(W, off)[st.mura];
+        const d = distanzaLayline(barca, ob.pos, st.mura, W, off), soglia = Math.max(2 * s.barca.lunghezza, 15);
+        if (Math.abs(delta(rlv, rotta)) <= 4) txt = "Sulla lay-line: boa dritta di prua";
+        else if (d !== null && Math.abs(d) <= soglia) { txt = "IN LAY-LINE: VIRA"; forte = true; }
+        else if (d !== null && d < 0) txt += " · oltre la lay-line di " + distanzaTesto(-d);
+        else if (d !== null) txt += " · lay-line tra " + distanzaTesto(d);
+      }
+      tattica.push(txt);
+    }
+  }
+  const pt = $("pr-tattica");
+  pt.hidden = !tattica.length; pt.textContent = tattica.join(" · "); pt.classList.toggle("forte", forte);
+
+  // Allarmi
+  const al = $("allarme"), rot = s.vento.rotazione;
+  if (st.allScarso?.attivo && !st.allScarso.riconosciuto) {
+    al.hidden = false; al.className = "allarme"; al.dataset.tipo = "scarso";
+    $("allarme-titolo").textContent = "SCARSO " + Math.round(st.allScarso.gradi) + "°";
+    $("allarme-testo").textContent = "Vento oltre la media da " + Math.round((adesso - st.allScarso.inizio) / 1000) + " s: valuta la virata.";
+  } else if (rot?.attivo) {
+    al.hidden = false; al.className = "allarme rotazione"; al.dataset.tipo = "rotazione";
+    $("allarme-titolo").textContent = "VENTO RUOTATO " + (rot.rotazione > 0 ? "+" : "−") + Math.round(Math.abs(rot.rotazione)) + "°";
+    $("allarme-testo").textContent = "Il vento medio è girato a " + (rot.rotazione > 0 ? "destra" : "sinistra") + ". Possibile rotazione persistente.";
+  } else al.hidden = true;
+
   // Pulsanti in basso
   const b = $("btn-gps");
   b.textContent = attivo ? "Ferma GPS" : "Avvia GPS";
   b.classList.toggle("attivo", attivo);
   const inRegata = attivo && !s.arrivo.taglio && ob.tappa;
+  const bb = $("btn-bolina");
+  bb.hidden = !attivo; bb.setAttribute("aria-pressed", String(!!s.vento.bolina));
+  bb.textContent = s.vento.bolina ? "BOLINA ✓" : "Bolina stretta?";
   $("btn-traguardo").hidden = !(ob.tappa?.tipo === "arrivo" && !s.arrivo.taglio && attivo);
   $("btn-passata").hidden = !(inRegata && ob.tappa.tipo !== "arrivo");
   if (ob.tappa) $("btn-passata").textContent = ob.tappa.tipo === "cancello" ? "Cancello passato ›" : ob.tappa.opzionale ? ob.tappa.codice + " passata o assente ›" : "Boa " + ob.tappa.codice + " passata ›";
@@ -284,11 +445,11 @@ function disegnaNav() {
     $("precisione").textContent = (dato === "vivo" ? "" : "ultima posizione · ") + "±" + Math.round(st.fix.accuracy ?? 0) + " m";
   }
   if (st.vista === "vista-campo" && !$("blocco-rilievo").hidden) disegnaAnteprimaRilievo(nav);
-  if (st.vista === "vista-nav") disegnaCarta(nav, attivo && dato === "vivo", ob);
+  if (st.vista === "vista-nav") disegnaCarta(nav, attivo && dato === "vivo", ob, {W, off, rlv});
 }
 
 // ---------------- Mappa ----------------
-function disegnaCarta(nav, vivo, ob) {
+function disegnaCarta(nav, vivo, ob, vento = {}) {
   const svg = $("carta"), W = svg.clientWidth, H = svg.clientHeight;
   if (!W || !H) return;
   if (st.segui && st.fix) st.centro = {lat: st.fix.lat, lon: st.fix.lon};
@@ -321,6 +482,19 @@ function disegnaCarta(nav, vivo, ob) {
   if (ob?.fonte === "rilevamento" && ob.boa) {
     const oss = ob.boa.osservazioni.at(-1), p = xy(oss), r = rad(oss.rilevamento), L = 3000;
     out += '<path d="M' + f1(p.x) + " " + f1(p.y) + "L" + f1(p.x + L * Math.sin(r)) + " " + f1(p.y - L * Math.cos(r)) + '" stroke="#fff" stroke-width="2" stroke-opacity=".85"/>';
+  }
+
+  // Lay-line dalla boa di bolina e freccia del vento (solo con vento tarato).
+  if (vento.off && Number.isFinite(vento.W) && ob?.pos && vento.rlv !== null && boaDiBolina(vento.rlv, vento.W, vento.off)) {
+    const c = rotteDiBolina(vento.W, vento.off), p = xy(ob.pos);
+    for (const r of [c.dritta, c.sinistra]) {
+      const a = rad(r + 180), L = 6000;
+      out += '<path d="M' + f1(p.x) + " " + f1(p.y) + "L" + f1(p.x + L * Math.sin(a)) + " " + f1(p.y - L * Math.cos(a)) + '" stroke="#bdbdbd" stroke-width="1.5" stroke-opacity=".7"/>';
+    }
+  }
+  if (Number.isFinite(vento.W)) {
+    out += '<g transform="translate(' + (W - 92) + ' 34) rotate(' + f1(vento.W + 180) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
+    out += '<text x="' + (W - 92) + '" y="68" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">VENTO ' + angolo(vento.W) + "</text>";
   }
 
   const etichette = [];
@@ -405,7 +579,57 @@ carta.addEventListener("pointercancel", rilascia);
 carta.addEventListener("wheel", e => { e.preventDefault(); const p = puntoSvg(e); zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, p.x, p.y); }, {passive: false});
 
 // ---------------- Disegno: liste (solo quando cambiano i dati o la scheda) ----------------
-function disegnaViste() { if (st.vista === "vista-campo") disegnaCampo(); if (st.vista === "vista-altro") disegnaAltro(); }
+function disegnaViste() { if (st.vista === "vista-campo") disegnaCampo(); if (st.vista === "vista-altro") disegnaAltro(); if (st.vista === "vista-vento") disegnaVento(); }
+
+// ---------------- Scheda Vento ----------------
+function disegnaVento() {
+  const adesso = Date.now(), sv = statoVento(adesso), t = sv.tar, v = s.vento;
+  $("v-medio").textContent = Number.isFinite(sv.medio) ? angolo(sv.medio) : "—";
+  $("v-medio-nota").textContent = sv.nMedia ? "ultimi " + v.imp.mediaMin + " min" : t.dir !== null ? "solo riferimento" : "da tarare";
+  $("v-ora").textContent = Number.isFinite(sv.recente) ? angolo(sv.recente) : "—";
+  $("v-salto").textContent = Number.isFinite(sv.salto) ? (sv.salto > 0 ? "+" : sv.salto < 0 ? "−" : "") + Math.round(Math.abs(sv.salto)) + "°" : "—";
+  const sn = $("v-salto-nota"), bs = Number.isFinite(sv.salto) ? st.bs : null;
+  sn.textContent = bs ? bs.tipo.toUpperCase() + " mure a " + st.mura : Number.isFinite(sv.salto) ? (sv.salto > 0 ? "a destra" : "a sinistra") : "\u00a0";
+  sn.className = bs?.tipo === "scarso" ? "scarso" : "";
+  const motivo = st.stima?.motivo;
+  $("v-stato").textContent = t.dir === null ? "Vento non tarato: usa uno dei tre metodi qui sotto."
+    : !gpsAttivo() ? "GPS fermo: le stime riprendono quando avvii il GPS."
+    : motivo ? "Stima del vento in pausa: " + motivo + ". Le stime si raccolgono solo in bolina stretta confermata, con rotta stabile."
+    : "Stima attiva: " + sv.nMedia + " stime negli ultimi " + v.imp.mediaMin + " minuti.";
+  const cl = classificaVento(v.campioni, adesso);
+  $("v-tipo").textContent = {"in raccolta": "In raccolta dati", oscillante: "Oscillante", persistente: "Persistente verso " + cl.lato, stabile: "Stabile"}[cl.tipo];
+  $("v-tipo-testo").textContent = cl.testo;
+  disegnaGraficoVento(adesso, sv.medio);
+  const metodo = v.iniziale?.metodo || (t.dir !== null ? "dalle boline" : null);
+  $("tar-stato").textContent = t.dir === null ? "Vento non tarato."
+    : "Riferimento " + angolo(t.dir) + " (" + metodo + "). Boline: dritta " + (v.rif.dritta ? angolo(v.rif.dritta.cog) : "—") + ", sinistra " + (v.rif.sinistra ? angolo(v.rif.sinistra.cog) : "—") +
+      ". Angolo di virata " + Math.round(t.angoloVirata) + "° " + (t.misurato ? "misurato." : "predefinito (registra le due boline per misurarlo).");
+  const lp = lineaPartenza(s.boe), lf = lp && Number.isFinite(sv.medio) ? latoFavorito(lp[0], lp[1], sv.medio) : null;
+  $("linea-stato").textContent = !lp ? "Segna con il GPS la barca CdR e la boa P nella scheda Campo."
+    : !lf ? "Tara il vento per sapere quale estremo è favorito."
+    : lf.favorito === "neutra" ? "Linea neutra (sbilanciamento sotto i 2°). Lunga " + Math.round(lf.lunghezza) + " m."
+    : "Favorita " + (lf.favorito === "P" ? "la boa P" : "la barca CdR") + ": " + Math.round(lf.sbilanciamento) + "° di sbilanciamento, " + Math.round(lf.vantaggio) + " m più sopravvento (" +
+      numero(lf.vantaggio / s.barca.lunghezza, 1) + " lunghezze). Linea lunga " + Math.round(lf.lunghezza) + " m. Ricorda: l'aria libera conta più dell'estremo favorito se lo sbilanciamento è piccolo.";
+  $("imp-soglia").value = String(v.imp.soglia); $("imp-durata").value = String(v.imp.durataS); $("imp-media").value = String(v.imp.mediaMin);
+  if (document.activeElement !== $("imp-lunghezza")) $("imp-lunghezza").value = String(s.barca.lunghezza);
+  if (document.activeElement !== $("imp-virata")) $("imp-virata").value = String(s.barca.angoloVirata);
+  $("imp-audio").setAttribute("aria-pressed", String(v.imp.audio));
+  $("imp-audio").textContent = "Suono dell'allarme: " + (v.imp.audio ? "sì" : "no");
+}
+function disegnaGraficoVento(adesso, medio) {
+  const svg = $("grafico-vento"), W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  const finestra = 30 * 60000, c = s.vento.campioni.filter(x => adesso - x.t <= finestra);
+  if (!c.length || !Number.isFinite(medio)) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#b5b5b5" font-size="14" text-anchor="middle">Nessuna stima ancora: serve la bolina stretta</text>'; return; }
+  const ys = c.map(x => delta(x.dir, medio)), lim = Math.max(10, Math.ceil(Math.max(...ys.map(Math.abs)) / 5) * 5);
+  const sx = 38, X = t => sx + (W - sx - 8) * (1 - (adesso - t) / finestra), Y = d => H / 2 - d / lim * (H / 2 - 16);
+  let out = '<path d="M' + sx + " " + H / 2 + "H" + (W - 8) + '" stroke="#ff0000" stroke-width="1.5"/>';
+  for (const d of [lim, -lim]) out += '<path d="M' + sx + " " + Y(d) + "H" + (W - 8) + '" stroke="#333"/><text x="4" y="' + (Y(d) + 4) + '" fill="#b5b5b5" font-size="11">' + (d > 0 ? "+" : "−") + Math.abs(d) + "°</text>";
+  out += '<text x="4" y="' + (H / 2 + 4) + '" fill="#fff" font-size="11">' + angolo(medio) + "</text>";
+  for (const m of [30, 15, 0]) out += '<text x="' + Math.min(W - 24, Math.max(sx, X(adesso - m * 60000))) + '" y="' + (H - 3) + '" fill="#b5b5b5" font-size="11" text-anchor="middle">' + (m ? "−" + m + " min" : "ora") + "</text>";
+  out += c.map((x, i) => '<circle cx="' + X(x.t).toFixed(1) + '" cy="' + Y(ys[i]).toFixed(1) + '" r="2" fill="' + (x.mura === "dritta" ? "#fff" : "#9a9a9a") + '"/>').join("");
+  svg.innerHTML = out;
+}
 
 function statoBoa(b) {
   if (b.pos?.fonte === "gps") return {testo: "GPS ±" + (b.pos.acc ?? "?") + " m · " + oraBreve(b.pos.t), classe: "gps"};
@@ -509,7 +733,7 @@ $("nuova-aggiungi").addEventListener("click", () => {
 // ---------------- Collegamenti dei pulsanti ----------------
 function mostraVista(id) {
   st.vista = id;
-  for (const v of ["vista-nav", "vista-campo", "vista-altro"]) $(v).hidden = v !== id;
+  for (const v of ["vista-nav", "vista-vento", "vista-campo", "vista-altro"]) $(v).hidden = v !== id;
   document.querySelectorAll(".schede button").forEach(b => { if (b.dataset.vista === id) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   disegnaViste(); aggiorna();
 }
@@ -568,13 +792,40 @@ $("file-importa").addEventListener("change", async e => {
 });
 $("btn-nuova").addEventListener("click", () => {
   if (!confirm("Iniziare una nuova sessione? Restano il campo e le posizioni indicate dalle istruzioni; si cancellano boe rilevate, arrivo, traccia e registro. Esporta prima se vuoi conservarli.")) return;
-  const campo = s.campo, boe = s.boe;
+  const campo = s.campo, boe = s.boe, barcaDati = s.barca, impVento = s.vento.imp;
   s = nuovaSessione(campo.modello);
+  s.barca = barcaDati; s.vento = nuovoVento(impVento); st.allScarso = null;
   s.campo = {...campo};
   s.boe = boe.map(b => ({...b, pos: b.pos?.fonte === "istruzioni" ? b.pos : null, storico: [], osservazioni: []}));
   evento("Nuova sessione · " + campo.nome); avvisa("Nuova sessione iniziata."); modificato();
 });
 
 new ResizeObserver(aggiorna).observe(carta);
+// Collegamenti della Fase 3
+$("btn-bolina").addEventListener("click", () => {
+  s.vento.bolina = !s.vento.bolina;
+  evento(s.vento.bolina ? "Bolina stretta confermata" : "Bolina stretta terminata");
+  if (s.vento.bolina && !tar().off) avvisa("Bolina confermata, ma il vento non è tarato: vai nella scheda Vento.");
+  salvaPresto(); aggiorna();
+});
+$("allarme-ok").addEventListener("click", () => {
+  if ($("allarme").dataset.tipo === "scarso" && st.allScarso) { st.allScarso.riconosciuto = true; evento("Allarme scarso visto"); }
+  else if (s.vento.rotazione) { const m = statoVento().medio; s.vento.rotazione = {riferimento: m, inizio: null, attivo: false, rotazione: 0}; evento("Nuovo riferimento del vento medio: " + angolo(m)); salvaPresto(); }
+  aggiorna();
+});
+$("tar-motore").addEventListener("click", taraMotore);
+$("tar-dritta").addEventListener("click", () => taraBolina("dritta"));
+$("tar-sinistra").addEventListener("click", () => taraBolina("sinistra"));
+$("tar-mano-ok").addEventListener("click", taraMano);
+$("tar-azzera").addEventListener("click", azzeraTaratura);
+const impostazione = (id, fn) => $(id).addEventListener("change", e => { fn(e.target.value); salvaPresto(); disegnaVento(); aggiorna(); });
+impostazione("imp-soglia", v => { s.vento.imp.soglia = Number(v); st.allScarso = null; });
+impostazione("imp-durata", v => { s.vento.imp.durataS = Number(v); });
+impostazione("imp-media", v => { s.vento.imp.mediaMin = Number(v); });
+impostazione("imp-lunghezza", v => { const n = Number(v); if (n >= 3 && n <= 40) s.barca.lunghezza = n; else avvisa("Lunghezza tra 3 e 40 metri."); });
+impostazione("imp-virata", v => { const n = Number(v); if (n >= 60 && n <= 130) s.barca.angoloVirata = n; else avvisa("Angolo di virata tra 60 e 130 gradi."); });
+$("imp-audio").addEventListener("click", () => { s.vento.imp.audio = !s.vento.imp.audio; if (s.vento.imp.audio) segnale(); salvaPresto(); disegnaVento(); });
+
 setInterval(aggiorna, 1000);
+setInterval(() => { if (st.vista === "vista-vento") disegnaVento(); }, 2000);
 mostraVista("vista-nav");

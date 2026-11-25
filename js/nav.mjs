@@ -1,5 +1,5 @@
 // Funzioni pure per la schermata di navigazione: smorzamento, stato del dato, formati.
-import {norm,circularMean,distanceMeters,bearing} from "./engine.mjs?v=0.3.1";
+import {norm,circularMean,distanceMeters,bearing} from "./engine.mjs?v=0.4";
 
 const KN = 1.9438444924406;
 

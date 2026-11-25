@@ -4,6 +4,17 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.4 — vento e tattica di bolina
+
+- Nuova scheda Vento. Taratura del vento in tre modi: a motore con la prua al vento, con le boline sulle due mure (misura l'angolo di virata reale), oppure a mano.
+- Pulsante BOLINA in navigazione: le stime del vento si raccolgono solo in bolina stretta confermata, con rotta stabile, lontano dalle virate; si spegne da solo se la barca poggia a lungo.
+- Vento medio (3/5/10 minuti), vento degli ultimi 20 secondi, salto e indicazione BUONO/SCARSO per la mura attuale.
+- Tipo di vento: oscillante (ampiezza e periodo), persistente (verso e velocità di rotazione) o stabile, con il consiglio strategico dei manuali.
+- Allarme SCARSO (soglia e durata regolabili, suono e vibrazione) e allarme di rotazione del vento medio.
+- Tattica: bordo favorevole verso la boa, distanza dalla lay-line, «IN LAY-LINE: VIRA», «oltre la lay-line»; lato favorito della linea di partenza in metri e lunghezze. Lay-line e freccia del vento sulla mappa.
+- Registro dati (un punto ogni 2 secondi) incluso nel file esportato, per l'analisi dopo le uscite.
+- Regole tattiche da: «Regole tattiche per l'app RR Regatta» (cartella Manuali Addestramento AI).
+
 ## Versione 0.3 — campo di regata
 
 - Tre schede: Navigazione, Campo, Altro.
@@ -32,4 +43,5 @@ Nessun dato viene inviato a server esterni.
 - `js/nav.mjs` — smorzamento, moto calcolato, formati italiani
 - `js/campo.mjs` — modelli di campo, sequenza, obiettivo della tappa, triangolazione
 - `js/stato.mjs` — sessione, cambio modello, salvataggio e verifica dei file
+- `js/vento.mjs` — taratura, stima del vento in bolina, salto, buono/scarso, tipo di vento, allarmi, bordo favorevole, lay-line, lato favorito della linea
 - `test/` — `node --test test/*.test.mjs`

@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.3.1">
+<link rel="stylesheet" href="./app.css?v=0.4">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.3.1</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.4</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
@@ -29,6 +29,11 @@
         <output class="valore"><span id="sog">—</span><small> kn</small></output>
         <span class="nota" id="nota-sog">GPS fermo</span>
       </div>
+      <div class="strumento" id="cella-vento">
+        <span class="etichetta">VENTO <small>medio</small></span>
+        <output class="valore" id="vento">—</output>
+        <span class="nota" id="nota-vento">da tarare</span>
+      </div>
     </section>
 
     <section class="prossima" aria-label="Prossima boa">
@@ -44,6 +49,7 @@
         <div><span>VMC</span><b id="pr-vmc">—</b></div>
       </div>
       <small class="pr-nota" id="pr-nota">—</small>
+      <small class="pr-tattica" id="pr-tattica" hidden>—</small>
     </section>
 
     <section class="mappa" id="mappa" aria-label="Mappa: nord in alto">
@@ -51,6 +57,10 @@
       <div class="mappa-messaggio" id="mappa-messaggio">
         <strong id="messaggio-titolo">Premi «Avvia GPS»</strong>
         <span id="messaggio-testo">La posizione della barca comparirà qui.</span>
+      </div>
+      <div class="allarme" id="allarme" role="alert" hidden>
+        <div><strong id="allarme-titolo">SCARSO</strong><span id="allarme-testo">—</span></div>
+        <button type="button" id="allarme-ok">Visto</button>
       </div>
       <div class="riquadro-pos" id="riquadro-pos" hidden><span id="lat">—</span><span id="lon">—</span><small id="precisione">—</small></div>
       <div class="comandi-mappa">
@@ -63,8 +73,65 @@
 
     <section class="azioni">
       <button type="button" class="principale" id="btn-gps">Avvia GPS</button>
+      <button type="button" class="interruttore-bolina" id="btn-bolina" aria-pressed="false" hidden>Bolina stretta?</button>
       <button type="button" class="secondario" id="btn-passata">Boa passata ›</button>
       <button type="button" class="principale" id="btn-traguardo" hidden>Taglia il traguardo</button>
+    </section>
+  </main>
+
+  <!-- VENTO -->
+  <main class="vista scorre" id="vista-vento" hidden>
+    <section class="blocco">
+      <h2>VENTO STIMATO</h2>
+      <div class="vento-griglia">
+        <div><span>Medio</span><b id="v-medio">—</b><small id="v-medio-nota">—</small></div>
+        <div><span>Adesso (20 s)</span><b id="v-ora">—</b><small>&nbsp;</small></div>
+        <div><span>Salto</span><b id="v-salto">—</b><small id="v-salto-nota">&nbsp;</small></div>
+      </div>
+      <p class="aiuto" id="v-stato">—</p>
+    </section>
+
+    <section class="blocco">
+      <h2>TIPO DI VENTO</h2>
+      <strong class="tipo-vento" id="v-tipo">—</strong>
+      <p class="aiuto" id="v-tipo-testo">—</p>
+      <div class="fig-vento"><svg id="grafico-vento" role="img" aria-label="Andamento del vento stimato negli ultimi 30 minuti"></svg></div>
+      <p class="aiuto">Andamento degli ultimi 30 minuti rispetto al vento medio: in alto il vento girato a destra, in basso a sinistra.</p>
+    </section>
+
+    <section class="blocco">
+      <h2>TARATURA</h2>
+      <p class="tar-stato" id="tar-stato">—</p>
+      <button type="button" class="principale largo" id="tar-motore">Memorizza vento a motore</button>
+      <p class="aiuto">A motore, prua esattamente al vento, rotta costante per una decina di secondi, poi premi.</p>
+      <div class="riga-pulsanti">
+        <button type="button" class="secondario" id="tar-dritta">Bolina mure a dritta</button>
+        <button type="button" class="secondario" id="tar-sinistra">Bolina mure a sinistra</button>
+      </div>
+      <p class="aiuto">In bolina stretta ben regolata, rotta costante, premi il pulsante della mura su cui sei. Fallo su entrambe le mure: così l'app misura il vostro angolo di virata reale.</p>
+      <div class="riga-mano">
+        <label>Vento a mano <input id="tar-mano" type="number" inputmode="numeric" min="0" max="359" placeholder="gradi"></label>
+        <button type="button" class="secondario" id="tar-mano-ok">Imposta</button>
+      </div>
+      <button type="button" class="collegamento-testo" id="tar-azzera">Azzera la taratura</button>
+    </section>
+
+    <section class="blocco">
+      <h2>LINEA DI PARTENZA</h2>
+      <p class="linea-stato" id="linea-stato">—</p>
+    </section>
+
+    <section class="blocco">
+      <h2>ALLARME E DATI DELLA BARCA</h2>
+      <div class="impostazioni">
+        <label>Allarme scarso oltre <select id="imp-soglia"><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option><option>12</option><option>15</option></select> gradi</label>
+        <label>per almeno <select id="imp-durata"><option>10</option><option>20</option><option>30</option><option>60</option></select> secondi</label>
+        <label>Vento medio sugli ultimi <select id="imp-media"><option>3</option><option>5</option><option>10</option></select> minuti</label>
+        <label>Lunghezza della barca <input id="imp-lunghezza" type="number" inputmode="decimal" min="3" max="40" step="0.1"> metri</label>
+        <label>Angolo di virata tipico <input id="imp-virata" type="number" inputmode="numeric" min="60" max="130"> gradi</label>
+      </div>
+      <button type="button" class="interruttore" id="imp-audio" aria-pressed="true">Suono dell'allarme: sì</button>
+      <p class="aiuto">L'angolo di virata tipico si usa solo finché non avete registrato le boline sulle due mure.</p>
     </section>
   </main>
 
@@ -150,12 +217,13 @@
 
   <nav class="schede" aria-label="Sezioni">
     <button type="button" data-vista="vista-nav" aria-current="page">Navigazione</button>
+    <button type="button" data-vista="vista-vento">Vento</button>
     <button type="button" data-vista="vista-campo">Campo</button>
     <button type="button" data-vista="vista-altro">Altro</button>
   </nav>
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.3.1"></script>
+<script type="module" src="./js/app.mjs?v=0.4"></script>
 </body>
 </html>
