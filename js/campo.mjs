@@ -1,5 +1,5 @@
 // Campo di regata: modelli dalle istruzioni, sequenza del percorso, obiettivo della tappa.
-import {distanceMeters, bearing, estimateMarkFromBearings, rad, move, norm} from "./engine.mjs?v=0.7.3";
+import {distanceMeters, bearing, estimateMarkFromBearings, rad, move, norm} from "./engine.mjs?v=0.8";
 
 const boa = (codice, nome, tipo, pos = null) => ({codice, nome, tipo, pos});
 const daIstruzioni = (gLat, mLat, gLon, mLon) => ({lat: gLat + mLat / 60, lon: gLon + mLon / 60, acc: null, t: null, fonte: "istruzioni"});
@@ -40,7 +40,7 @@ for (const percorso of [1, 2, 3]) for (const gruppo of [1, 2]) {
       : "Costiero. Tutte le boe a sinistra; D solo se posata. G è il passaggio al cancello (linea di partenza/arrivo): tempo valido come prima prova."
   };
 }
-MODELLI["allenamento"] = {nome: "Allenamento · campo disegnato", boe: [], sequenza: "S", arrivo: {ugualePartenza: true, etichette: ["Battello CdR", "Boa di partenza"]},
+MODELLI["allenamento"] = {nome: "Campo disegnato o d'allenamento", boe: [], sequenza: "S", arrivo: {ugualePartenza: true, etichette: ["Battello CdR", "Boa di partenza"]},
   note: "Boe virtuali per gli esercizi: usa i campi pronti qui sotto oppure «Disegna sulla mappa». La sequenza si aggiorna da sola; l'arrivo è sulla linea di partenza."};
 MODELLI["personalizzato"] = {nome: "Personalizzato", boe: PARTENZA, sequenza: "S - F", arrivo: {ugualePartenza: false, etichette: ["Estremo 1", "Estremo 2"]},
   note: "Aggiungi le boe e scrivi la sequenza: S partenza, F arrivo, G cancello, boa eventuale tra parentesi, ad esempio S - (D) - 1 - 2 - F."};

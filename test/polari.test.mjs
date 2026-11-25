@@ -31,6 +31,7 @@ test("punto accettato solo con rotta e velocità stabili da 20 secondi", () => {
   assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso - 25 * 60000}, fixes: fx(() => 90, () => 6)}).motivo, /la taratura del vento ha 25 minuti/);
   assert.match(valutaPunto({...base, vento: null, fixes: fx(() => 90, () => 6)}).motivo, /intensità/);
   assert.match(valutaPunto({...base, ultimoCambioVele: adesso - 10000, fixes: fx(() => 90, () => 6)}).motivo, /vele appena cambiate/);
+  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "andatura"}, fixes: fx(() => 90, () => 6)}).motivo, /taratura a motore/);
 });
 
 // Barca di prova con una polare nota: v = 7·sin(...) semplificata.

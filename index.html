@@ -5,27 +5,37 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.7.3">
+<link rel="stylesheet" href="./app.css?v=0.8">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.7.3</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.8</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
   <!-- PAGINA INIZIALE -->
   <main class="vista scorre" id="vista-home">
-    <h1 class="home-titolo">Che cosa facciamo oggi?</h1>
-    <button type="button" class="modo-app" data-modo-app="navigazione"><strong>Navigazione</strong><span>Strumentazione di bordo: rotta, velocità, vento medio e andatura.</span></button>
-    <button type="button" class="modo-app" data-modo-app="allenamento"><strong>Allenamento</strong><span>Esercizi con boe virtuali, prove di partenza con timer e cronometro.</span></button>
-    <button type="button" class="modo-app" data-modo-app="regata"><strong>Regata</strong><span>Strumentazione per la regata: campo, linea di partenza, salti di vento (buoni e scarsi), lay-line e arrivo.</span></button>
-    <button type="button" class="modo-app" data-modo-app="polari"><strong>Polari</strong><span>Misura delle velocità della barca a ogni angolo dal vento, per intensità del vento e vele a riva.</span></button>
+    <button type="button" class="modo-app" data-modo-app="navigazione">Navigazione</button>
+    <button type="button" class="modo-app" data-modo-app="allenamento">Allenamento</button>
+    <button type="button" class="modo-app" data-modo-app="regata">Regata</button>
+    <button type="button" class="modo-app" data-modo-app="polari">Polari</button>
     <a class="secondario largo guida-link" href="./guida/">Guida all'app</a>
     <button type="button" class="secondario largo" id="home-altro">File, registro e impostazioni</button>
     <p class="aiuto" id="home-stato">—</p>
+  </main>
+
+  <!-- SPIEGAZIONE DELLA MODALITÀ, PRIMA DELLA CONFERMA -->
+  <main class="vista scorre" id="vista-intro" hidden>
+    <section class="blocco">
+      <h2 id="intro-titolo">—</h2>
+      <p class="intro-sintesi" id="intro-sintesi">—</p>
+      <ul class="intro-lista" id="intro-lista"></ul>
+    </section>
+    <button type="button" class="principale largo" id="intro-conferma">Conferma</button>
+    <button type="button" class="secondario largo" id="intro-indietro">Indietro</button>
   </main>
 
   <!-- PREPARAZIONE GUIDATA -->
@@ -98,6 +108,15 @@
         <div><strong id="allarme-titolo">SCARSO</strong><span id="allarme-testo">—</span></div>
         <button type="button" id="allarme-ok">Visto</button>
       </div>
+      <div class="pannello-andatura" id="pannello-andatura" hidden>
+        <div class="crono-testa"><strong>Che andatura?</strong><button type="button" class="crono-chiudi" id="andatura-chiudi" aria-label="Chiudi">×</button></div>
+        <p class="crono-info" id="andatura-info">—</p>
+        <div class="griglia-andature" id="griglia-andature"></div>
+      </div>
+      <div class="richiesta-andatura" id="richiesta-andatura" hidden>
+        <p id="richiesta-testo">—</p>
+        <div class="crono-comandi"><button type="button" class="principale" id="richiesta-giusta">Giusta</button><button type="button" id="richiesta-cambia">Cambia</button></div>
+      </div>
       <div class="crono" id="crono" hidden>
         <div class="crono-testa">
           <div class="segmento crono-modo" role="group" aria-label="Timer o cronometro">
@@ -127,8 +146,8 @@
         <div class="disegno-comandi">
           <div class="segmento" role="group" aria-label="Cosa mettere">
             <button type="button" data-metti="boa" aria-pressed="true">Boa</button>
-            <button type="button" data-metti="CdR" aria-pressed="false">CdR</button>
-            <button type="button" data-metti="P" aria-pressed="false">P</button>
+            <button type="button" data-metti="CdR" aria-pressed="false">Comitato</button>
+            <button type="button" data-metti="P" aria-pressed="false">Pin</button>
           </div>
           <button type="button" id="disegno-togli" hidden>Togli</button>
           <button type="button" id="disegno-annulla" aria-label="Annulla l'ultima modifica">↶</button>
@@ -142,12 +161,13 @@
         <button type="button" id="tutto" class="testo" aria-label="Inquadra barca e boe">Tutto</button>
         <button type="button" id="segui" class="testo" aria-label="Centra sulla barca e seguila">Barca</button>
         <button type="button" id="btn-crono" class="testo" aria-label="Timer di partenza e cronometro">Timer</button>
+        <button type="button" id="btn-disegna-mappa" class="testo" aria-label="Disegna boe, barca comitato e pin sulla mappa" hidden>Disegna</button>
       </div>
     </section>
 
     <section class="azioni">
       <button type="button" class="principale" id="btn-gps">Accendi GPS</button>
-      <button type="button" class="interruttore-bolina" id="btn-bolina" aria-pressed="false" hidden>Bolina stretta: no</button>
+      <button type="button" class="interruttore-bolina" id="btn-andatura" aria-pressed="false" hidden>Andatura</button>
       <button type="button" class="secondario" id="btn-passata">Boa passata ›</button>
       <button type="button" class="interruttore-bolina registra-azione" id="btn-registra" aria-pressed="false" hidden>Registra</button>
       <button type="button" class="principale" id="btn-traguardo" hidden>Taglia il traguardo</button>
@@ -356,6 +376,8 @@
   <main class="vista scorre" id="vista-altro" hidden>
     <section class="blocco">
       <h2>SCHERMO E MAPPA</h2>
+      <div class="impostazioni"><label>Chiedi di confermare l'andatura ogni <select id="imp-promemoria"><option value="0">mai</option><option value="3">3 minuti</option><option value="5">5 minuti</option><option value="10">10 minuti</option></select></label></div>
+      <p class="aiuto">La richiesta compare in navigazione, allenamento e regata, solo quando la barca è in movimento e non sei in bolina stretta.</p>
       <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
       <p class="aiuto">A schermo spento il telefono smette di leggere il GPS: in navigazione tienilo acceso.</p>
       <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia sulla mappa: no</button>
@@ -384,6 +406,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.7.3"></script>
+<script type="module" src="./js/app.mjs?v=0.8"></script>
 </body>
 </html>

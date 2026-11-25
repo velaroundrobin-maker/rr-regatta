@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.7.3";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.8";
 
 export const MURE = ["dritta", "sinistra"];
 
@@ -201,4 +201,16 @@ export function andatura(cog, dirVento) {
   const a = Math.abs(delta(cog, dirVento));
   const nome = a < 30 ? "Prua al vento" : a < 50 ? "Bolina stretta" : a < 75 ? "Bolina larga" : a < 105 ? "Traverso" : a < 135 ? "Lasco" : a < 165 ? "Gran lasco" : "Poppa";
   return {nome, angolo: a, mura: muraDa(cog, dirVento)};
+}
+
+// ---------------- Andatura dichiarata dall'equipaggio ----------------
+// Angolo dal vento di ogni andatura (centro dei limiti usati per mostrarla). La bolina stretta usa l'angolo
+// della barca (metà dell'angolo di virata tarato o tipico).
+export const ANDATURE = ["Bolina stretta", "Bolina larga", "Traverso", "Lasco", "Gran lasco", "Poppa"];
+export const ANGOLO_ANDATURA = {"Bolina larga": 62, "Traverso": 90, "Lasco": 120, "Gran lasco": 150, "Poppa": 172};
+// Mure a sinistra: il vento arriva da sinistra, quindi sta «a sinistra» della rotta (rotta − angolo).
+export function ventoDaAndatura(cog, nome, mura, angoloBolina = 45) {
+  const a = nome === "Bolina stretta" ? angoloBolina : ANGOLO_ANDATURA[nome];
+  if (!Number.isFinite(cog) || !Number.isFinite(a) || (mura !== "sinistra" && mura !== "dritta")) return null;
+  return norm(mura === "sinistra" ? cog - a : cog + a);
 }

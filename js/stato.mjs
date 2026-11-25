@@ -1,5 +1,5 @@
 // Sessione di regata: creazione, cambio modello senza perdere le posizioni, salvataggio e verifica dei file.
-import {MODELLI} from "./campo.mjs?v=0.7.3";
+import {MODELLI} from "./campo.mjs?v=0.8";
 
 export const CHIAVE = "rr-regatta-sessione-v1";
 const copia = x => JSON.parse(JSON.stringify(x));
@@ -21,7 +21,7 @@ export const nuovoTimer = (ultimi10 = false) => ({zero: null, ultimi10, partenza
 export const nuovoCrono = () => ({inizio: null, accumulato: 0, parziali: [], posAvvio: null});
 export function nuovoVento(imp) {
   return {iniziale: null, rif: {dritta: null, sinistra: null}, campioni: [], rotazione: null, bolina: false,
-    imp: {soglia: 6, durataS: 20, mediaMin: 5, audio: true, ...(imp || {})}};
+    imp: {soglia: 6, durataS: 20, mediaMin: 5, audio: true, promemoriaMin: 3, ...(imp || {})}};
 }
 
 // Cambia modello mantenendo posizioni, rilevamenti e storico delle boe con lo stesso codice.

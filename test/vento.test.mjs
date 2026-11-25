@@ -154,3 +154,15 @@ test("andatura dall'angolo tra rotta e vento", () => {
   assert.equal(andatura(10, 0).nome, "Prua al vento");
   assert.equal(andatura(NaN, 0), null);
 });
+import {ventoDaAndatura, ANDATURE} from "../js/vento.mjs";
+test("vento dall'andatura dichiarata, coerente con l'andatura mostrata", () => {
+  assert.equal(ventoDaAndatura(120, "Traverso", "sinistra"), 30);
+  assert.equal(ventoDaAndatura(120, "Traverso", "dritta"), 210);
+  assert.equal(ventoDaAndatura(10, "Lasco", "sinistra"), 250);
+  assert.equal(ventoDaAndatura(300, "Bolina stretta", "dritta", 44), 344);
+  assert.equal(ventoDaAndatura(120, "Traverso", "boh"), null);
+  for (const nome of ANDATURE) for (const mura of ["sinistra", "dritta"]) {
+    const cog = 77, w = ventoDaAndatura(cog, nome, mura, 42), a = andatura(cog, w);
+    assert.equal(a.nome, nome, nome + " " + mura); assert.equal(a.mura, mura);
+  }
+});

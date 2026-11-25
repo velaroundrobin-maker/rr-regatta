@@ -2,7 +2,7 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.7.3";
+import {delta, circularMean} from "./engine.mjs?v=0.8";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
 export const PRUA = ["J1", "J2", "J3", "Tormentina"];
@@ -75,6 +75,7 @@ export function classeVento(tws) {
 // fixes: punti GPS recenti {received, cog, sog, accuracy}. Il punto vale solo se rotta e velocità sono stabili da 20 s.
 export function valutaPunto({fixes, adesso, rif, vento, validitaMs, ultimoCambioVele, minSog = 1}) {
   if (!rif || !Number.isFinite(rif.dir)) return {ok: false, motivo: "direzione del vento non tarata"};
+  if (rif.fonte === "andatura") return {ok: false, motivo: "il vento è stimato dall'andatura: per le polari serve la taratura a motore"};
   if (Number.isFinite(rif.t) && adesso - rif.t > validitaMs) return {ok: false, motivo: "la taratura del vento ha " + Math.round((adesso - rif.t) / 60000) + " minuti: ritarala"};
   if (!vento || !Number.isFinite(vento.tws)) return {ok: false, motivo: "manca l'intensità del vento"};
   if (adesso - vento.t > validitaMs) return {ok: false, motivo: "l'intensità del vento ha " + Math.round((adesso - vento.t) / 60000) + " minuti: aggiornala"};

@@ -4,6 +4,15 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.8 — andatura dichiarata, pagina iniziale essenziale, disegno dalla mappa
+
+- Pagina iniziale con le sole quattro modalità; toccandone una compare la spiegazione con «Conferma».
+- Pulsante «Andatura» (al posto di «Bolina stretta»): l'equipaggio dichiara andatura e mure, l'app ricava il vento dalla rotta; se il vento gira si dichiara la nuova andatura. «Bolina stretta» avvia le stime continue dei salti. Il vento dall'andatura non vale per le polari.
+- Richiesta di conferma dell'andatura ogni 3 minuti (5, 10 o mai, nelle impostazioni).
+- Freccia del vento girata: indica dove va il vento.
+- Boe disegnate in modo sobrio (punto rosso con un anello, anello rosso per la prossima boa); barca comitato disegnata come una barchetta con la prua al vento.
+- Pulsante «Disegna» sulla mappa (Allenamento e Regata): barca comitato, pin e boe, col dito o con la pennina, anche senza GPS; su un campo di regata chiede se disegnarne uno nuovo.
+
 ## Versione 0.7.3 — testi rivisti e guida
 
 - Tutti i testi riletti e corretti; si usa sempre il «tu». Navigazione: «Strumentazione di bordo»; Regata: «Strumentazione per la regata».

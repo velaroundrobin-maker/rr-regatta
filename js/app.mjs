@@ -1,17 +1,17 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.7.3";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.7.3";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.7.3";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.8";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.8";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.8";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.7.3";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.7.3";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.7.3";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.8";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.8";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.8";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura} from "./vento.mjs?v=0.7.3";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.8";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.7.3";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.8";
 
-const VERSIONE = "0.7.3";
+const VERSIONE = "0.8";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -19,7 +19,7 @@ const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "
 const ora = t => new Date(t).toLocaleTimeString("it-IT");
 const etaTesto = ms => ms < 90000 ? "adesso" : Math.round(ms / 60000) + " min fa";
 // «tarato» riferito al vento, «tarata» riferito alla direzione.
-const fonteVento = (t, femminile = false) => { const o = femminile ? "a" : "o"; return t.fonte === "boline" ? "misurat" + o + " con le due boline" : t.fonte === "a mano" ? "inserit" + o + " a mano" : "tarat" + o + " a motore"; };
+const fonteVento = (t, femminile = false) => { const o = femminile ? "a" : "o"; return t.fonte === "boline" ? "misurat" + o + " con le due boline" : t.fonte === "a mano" ? "inserit" + o + " a mano" : t.fonte === "andatura" ? "stimat" + o + " dall'andatura" : "tarat" + o + " a motore"; };
 const oraBreve = t => new Date(t).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
 
 // Errori del programma sempre visibili: niente più schermate mute.
@@ -241,7 +241,7 @@ const veleAttuali = () => indiceVele(pol, pol.vele);
 function elaboraPolari(adesso) {
   if (!st.polRegistra) { st.polValuta = null; return; }
   const t = tar();
-  st.polValuta = valutaPunto({fixes: st.fixes, adesso, rif: {dir: t.dir, t: t.t}, vento: pol.vento,
+  st.polValuta = valutaPunto({fixes: st.fixes, adesso, rif: {dir: t.dir, t: t.t, fonte: t.fonte}, vento: pol.vento,
     validitaMs: pol.imp.validitaMin * 60000, ultimoCambioVele: st.polCambioVele});
   if (st.polValuta.ok && adesso - st.polUltimo >= 2000) {
     st.polUltimo = adesso;
@@ -413,6 +413,10 @@ function tickTimer() {
   }
   st.ultimoTick = adesso;
   if (st.vista === "vista-nav") disegnaCrono(adesso);
+  if (adesso - (st.ultimoControllo || 0) < 1000) return; // una volta al secondo basta
+  st.ultimoControllo = adesso;
+  controllaRichiesta(adesso);
+  if (st.andaturaAperta && st.vista === "vista-nav") disegnaAndatura();
 }
 function comandoTimer(azione) {
   const adesso = Date.now(), z = s.timer.zero;
@@ -428,13 +432,13 @@ function comandoTimer(azione) {
 }
 function testoLinea(adesso) {
   const linea = lineaPartenza(s.boe);
-  if (!linea) return {testo: "Per distanza e tempo dalla linea servono CdR e P segnati.", classe: ""};
+  if (!linea) return {testo: "Per distanza e tempo dalla linea servono barca comitato e pin segnati.", classe: ""};
   if (!fixVivo()) return {testo: "Serve il GPS per distanza e tempo dalla linea.", classe: ""};
   const nav = smoothNav(st.fixes), sv = statoVento(adesso);
   const prima = trovaBoa(s.boe, tappe(s.campo.sequenza).find(t => t.tipo === "boa")?.codice || "")?.pos || null;
   const r = distanzaTempo({barca: st.fix, cog: nav.cog, sog: nav.sog, linea, dirVento: Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir, boa: prima,
     mancanoMs: Number.isFinite(s.timer.zero) ? s.timer.zero - adesso : null});
-  if (!r) return {testo: "Linea troppo corta: controlla CdR e P.", classe: ""};
+  if (!r) return {testo: "Linea troppo corta: controlla barca comitato e pin.", classe: ""};
   const prePartenza = Number.isFinite(s.timer.zero) && s.timer.zero > adesso;
   if (r.oltreLinea) return {testo: prePartenza ? "OLTRE LA LINEA: torna sotto!" : "Oltre la linea di " + Math.round(-r.distanza) + " m", classe: prePartenza ? "allarme-linea" : ""};
   const parti = ["Linea " + Math.round(r.distanza) + " m"];
@@ -510,13 +514,24 @@ function boaVicina(p) {
 }
 function avviaDisegno() {
   if (!st.centro) {
+    // Anche prima di uscire, senza GPS: si parte dall'ultima posizione nota, dalle boe o da Loano.
+    const ultima = s.traccia[s.traccia.length - 1];
     if (st.fix) st.centro = {lat: st.fix.lat, lon: st.fix.lon};
     else if (s.boe.some(b => b.pos)) inquadraTutto();
-    else { avvisa("Avvia il GPS: il campo si disegna intorno alla barca."); return; }
+    else st.centro = ultima ? {lat: ultima.lat, lon: ultima.lon} : {lat: 44.135, lon: 8.27};
   }
-  st.disegno = {metti: "boa"}; st.segui = false; st.selezionata = null; st.annullaDisegno = [];
-  mostraVista("vista-nav"); disegnaBarra();
-  if (s.campo.modello !== "allenamento") avvisa("Campo di regata: le boe che aggiungi vanno inserite a mano nella sequenza (Regata → Cambia campo).");
+  // Sopra un campo di regata: campo nuovo da disegnare, oppure boe aggiunte al campo esistente.
+  if (s.campo.modello !== "allenamento") {
+    if (confirm("Disegnare un campo nuovo al posto di «" + s.campo.nome + "»?\n\nOK: campo nuovo, vuoto (le boe del campo attuale si tolgono).\nAnnulla: aggiungi boe al campo attuale.")) {
+      s.campo = {nome: "Campo disegnato", modello: "allenamento", sequenza: ""};
+      s.boe = []; s.tappa = 0;
+      s.arrivo = {ugualePartenza: true, etichette: ["Barca comitato", "Pin"], estremi: {a: null, b: null}, taglio: null};
+      evento("Nuovo campo da disegnare");
+    } else avvisa("Le boe che aggiungi vanno inserite a mano nella sequenza (scheda Regata → Cambia campo di regata).");
+  }
+  st.disegno = {metti: s.boe.some(b => b.codice === "CdR" && b.pos) ? "boa" : "CdR"}; st.segui = false; st.selezionata = null; st.annullaDisegno = [];
+  mostraVista("vista-nav"); disegnaBarra(); salvaPresto();
+  avvisa(st.disegno.metti === "CdR" ? "Tocca la mappa dove mettere la barca comitato, poi il pin; poi le boe. Trascina per spostare." : "Tocca la mappa per mettere una boa; trascina una boa per spostarla.");
 }
 function disegnaBarra() {
   $("disegno-barra").hidden = !st.disegno;
@@ -526,7 +541,7 @@ function disegnaBarra() {
   t.hidden = !st.selezionata; t.textContent = "Togli " + (st.selezionata || "");
   $("disegno-annulla").disabled = !st.annullaDisegno.length;
   $("disegno-aiuto").textContent = st.disegno.metti === "boa" ? "Tocca la mappa per mettere una boa. Trascina una boa per spostarla; toccala per sceglierla."
-    : "Tocca la mappa dove mettere " + (st.disegno.metti === "CdR" ? "la barca CdR (estremo destro della linea, guardando il vento)." : "la boa P (estremo sinistro della linea, guardando il vento).");
+    : "Tocca la mappa dove mettere " + (st.disegno.metti === "CdR" ? "la barca comitato (estremo destro della linea, guardando il vento)." : "il pin (estremo sinistro della linea, guardando il vento).");
 }
 function metti(punto) {
   if (!punto) return;
@@ -546,7 +561,7 @@ function metti(punto) {
     if (cosa === "CdR" && !trovaBoa(s.boe, "P")?.pos) st.disegno.metti = "P";
     else if (cosa === "P" && !trovaBoa(s.boe, "CdR")?.pos) st.disegno.metti = "CdR";
     else st.disegno.metti = "boa";
-    dopoDisegno((cosa === "CdR" ? "Barca CdR" : "Boa P") + " virtuale");
+    dopoDisegno((cosa === "CdR" ? "Barca comitato" : "Pin") + " virtuale");
   }
 }
 function dopoDisegno(testo, modifica = {}) {
@@ -627,7 +642,7 @@ function vaiAllaHome() {
   st.modo = null; mostraVista("vista-home");
 }
 async function entraModo(m) {
-  st.modo = m;
+  st.modo = m; st.ultimaRichiesta = Date.now(); st.andaturaAperta = false;
   if (!gpsAttivo() && st.fase !== "errore") avviaGps();
   // Entrando in una modalità lo schermo resta acceso da solo (si spegne in «File, registro e impostazioni»).
   if ("wakeLock" in navigator && !st.wakeLock) { st.vuoleSchermo = true; chiediSchermo(); }
@@ -645,12 +660,13 @@ const passoGps = () => ({titolo: "GPS", testo: "Rotta e velocità vengono dal GP
   azioni: gpsAttivo() ? [] : [["gps", "Accendi il GPS", true]]});
 const passoSchermo = () => ({titolo: "Schermo sempre acceso", testo: "A schermo spento il telefono smette di leggere il GPS e il timer non suona. L'app tiene lo schermo acceso da sola: tieni il telefono in carica.",
   fatto: !!st.wakeLock, stato: st.wakeLock ? "Lo schermo resta acceso." : "Lo schermo può spegnersi.", azioni: st.wakeLock ? [] : [["schermo", "Tieni acceso lo schermo", true]]});
-function passoVento(perche, completo = false) {
-  const t = tar(), ok = t.dir !== null && (!completo || t.misurato);
-  return {titolo: "Direzione del vento", testo: perche + " Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi.",
+function passoVento(perche, conAndatura = true) {
+  const t = tar(), ok = t.dir !== null;
+  return {titolo: "Direzione del vento", testo: perche + " Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi." +
+    (conAndatura ? " In alternativa, a vela, dichiara l'andatura e le mure: l'app ricava il vento dalla rotta (meno preciso)." : ""),
     fatto: ok, stato: t.dir === null ? "Vento non tarato." : "Vento da " + angolo(t.dir) + ", " + fonteVento(t) + (t.t ? " " + etaTesto(Date.now() - t.t) : "") +
       (t.misurato ? " · angolo di virata " + Math.round(t.angoloVirata) + "°." : "."),
-    azioni: [["motore", t.dir === null ? "Prua al vento a motore: memorizza" : "Ritara: prua al vento a motore", t.dir === null]]};
+    azioni: [["motore", t.dir === null ? "Prua al vento a motore: memorizza" : "Ritara: prua al vento a motore", t.dir === null], ...(conAndatura ? [["andatura", "Dichiara l'andatura"]] : [])]};
 }
 const passoTimer = testo => ({titolo: "Timer di partenza", facoltativo: true, testo,
   fatto: Number.isFinite(s.timer.zero), stato: !Number.isFinite(s.timer.zero) ? "Timer fermo." : s.timer.zero > Date.now() ? "Timer avviato." : "Partiti.",
@@ -674,9 +690,9 @@ function passiModo(m) {
     return [passoGps(), passoSchermo(),
       {titolo: "Percorso", testo: "Scegli il percorso delle istruzioni di regata (Loano, Alassio) oppure costruiscilo disegnando sulla mappa.",
         fatto: true, stato: s.campo.nome + " · " + s.campo.sequenza, azioni: [["vai:vista-regata:configura", "Scegli il percorso"], ["disegna", "Disegna sulla mappa"]]},
-      {titolo: "Linea di partenza", testo: "Passa vicino alla barca giuria e premi «Segna CdR», poi vicino alla boa P e premi «Segna P». Serve per il lato favorito e per distanza e tempo nel timer.",
+      {titolo: "Linea di partenza", testo: "Passa vicino alla barca comitato e premi «Segna comitato», poi vicino al pin e premi «Segna pin». In alternativa disegnali sulla mappa. Servono per l'estremo favorito e per distanza e tempo nel timer.",
         fatto: !!lp, stato: lp ? "Linea segnata" + (cdr && p ? " col GPS." : " (in parte virtuale o stimata).") : "Linea non segnata.",
-        azioni: [["segna:CdR", cdr ? "Aggiorna CdR" : "Segna CdR"], ["segna:P", p ? "Aggiorna P" : "Segna P"]]},
+        azioni: [["segna:CdR", cdr ? "Aggiorna comitato" : "Segna comitato"], ["segna:P", p ? "Aggiorna pin" : "Segna pin"], ["disegna", "Disegna sulla mappa"]]},
       ...(b ? [{titolo: "Boa " + b.codice + " · " + b.nome, testo: "Se ci passi vicino, segna la sua posizione col GPS. Altrimenti rilevala: guardala e indica di quanti gradi si trova rispetto alla prua; due rilevamenti da punti diversi danno la posizione.",
         fatto: !!b.pos, stato: b.pos ? statoBoa(b).testo : "Posizione ignota.", azioni: [["segna:" + b.codice, b.pos?.fonte === "gps" ? "Aggiorna GPS" : "Segna GPS"], ["rileva:" + b.codice, "Rileva"]]}] : []),
       passoVento("In regata serve per i salti di vento (buoni e scarsi), le lay-line e il lato favorito della linea. Falla poco prima della partenza."),
@@ -684,9 +700,9 @@ function passiModo(m) {
   }
   if (m === "polari") {
     const t = tar(), lim = pol.imp.validitaMin * 60000, adesso = Date.now();
-    const dirOk = t.dir !== null && (!t.t || adesso - t.t <= lim), twsOk = pol.vento && adesso - pol.vento.t <= lim;
+    const dirOk = t.dir !== null && t.fonte !== "andatura" && (!t.t || adesso - t.t <= lim), twsOk = pol.vento && adesso - pol.vento.t <= lim;
     return [passoGps(), passoSchermo(),
-      {...passoVento("Le polari misurano la velocità a ogni angolo dal vento, quindi la direzione deve essere precisa. Ritarala almeno ogni " + pol.imp.validitaMin + " minuti."), fatto: dirOk},
+      {...passoVento("Le polari misurano la velocità a ogni angolo dal vento, quindi la direzione deve essere precisa. Ritarala almeno ogni " + pol.imp.validitaMin + " minuti.", false), fatto: dirOk},
       {titolo: "Intensità del vento", testo: "A barca ferma leggi l'anemometro di coperta e inserisci il valore. Aggiornalo quando il vento cambia.",
         fatto: !!twsOk, stato: pol.vento ? numero(pol.vento.tws, 1) + " nodi, " + etaTesto(adesso - pol.vento.t) + (twsOk ? "." : ": da aggiornare.") : "Non inserita.",
         azioni: [["vai:vista-polari:pol-tws", "Inserisci il vento", !twsOk]]},
@@ -716,6 +732,7 @@ function azioneGuida(cmd) {
   if (a === "gps") { if (!gpsAttivo()) avviaGps(); }
   else if (a === "schermo") { if (!("wakeLock" in navigator)) avvisa("Questo browser non permette di tenere lo schermo acceso."); else { st.vuoleSchermo = true; chiediSchermo().then(aggiorna); } }
   else if (a === "motore") taraMotore();
+  else if (a === "andatura") { mostraVista("vista-nav"); apriAndatura(); }
   else if (a === "dritta" || a === "sinistra") taraBolina(a);
   else if (a === "campo") {
     st.tipoAllenamento = x;
@@ -736,6 +753,93 @@ function azioneGuida(cmd) {
     setTimeout(() => el.scrollIntoView({block: "center"}), 50);
   }
   aggiorna();
+}
+
+// ---------------- Spiegazione delle modalità (v0.8) ----------------
+const SPIEGAZIONE = {
+  navigazione: {sintesi: "Strumentazione di bordo: rotta, velocità, vento medio e andatura.", lista: [
+    "Rotta e velocità sul fondo, dal GPS del telefono.",
+    "Vento: si tara con la prua al vento a motore, oppure dichiarando l'andatura (traverso, lasco…) con il pulsante «Andatura».",
+    "Andatura e mure, calcolate da rotta e vento. Se il vento gira, dichiari la nuova andatura e il vento si aggiorna.",
+    "Ogni 3 minuti l'app ti chiede di confermare l'andatura (si può cambiare nelle impostazioni).",
+    "Mappa con la barca, timer di partenza e cronometro."]},
+  allenamento: {sintesi: "Esercizi con boe, prove di partenza con timer e cronometro.", lista: [
+    "Boe: campi pronti costruiti intorno alla barca (solo partenza, partenza e bolina, bastone, due boe) oppure disegnati sulla mappa con il dito: barca comitato, pin e boe.",
+    "Timer di partenza da −5 minuti con i segnali sonori; con la linea segnata ti dice metri, secondi e anticipo o ritardo.",
+    "Cronometro con tempi parziali, metri percorsi e velocità media.",
+    "Vento e andatura come in navigazione; verso la boa: distanza, rilevamento e VMC."]},
+  regata: {sintesi: "Strumentazione per la regata: campo, linea di partenza, salti di vento, buoni e scarsi.", lista: [
+    "Campo: il percorso delle istruzioni di regata (Loano, Alassio) oppure disegnato sulla mappa.",
+    "Linea di partenza: si segnano barca comitato e pin; l'app indica l'estremo favorito e, con il timer, distanza e tempo dalla linea.",
+    "Salti di vento: in bolina stretta l'app indica buono e scarso e suona quando lo scarso dura.",
+    "Mure favorite verso la boa, lay-line e momento della virata.",
+    "Boa passata, arrivo e registro della regata."]},
+  polari: {sintesi: "Misura delle velocità della barca a ogni angolo dal vento.", lista: [
+    "La direzione del vento si tara con la prua al vento a motore; l'intensità si legge a barca ferma sull'anemometro di coperta.",
+    "Indichi le vele a riva: vela di prua, randa e vele colorate.",
+    "L'app registra un punto ogni 2 secondi quando rotta e velocità sono stabili.",
+    "Ne ricava la polare della barca, gli angoli migliori di bolina e di poppa e, durante la navigazione, a quanti per cento della polare stai andando."]}
+};
+function mostraIntro(m) {
+  st.modoProposto = m;
+  $("intro-titolo").textContent = NOMI_MODO[m].toUpperCase();
+  $("intro-sintesi").textContent = SPIEGAZIONE[m].sintesi;
+  $("intro-lista").innerHTML = SPIEGAZIONE[m].lista.map(x => "<li>" + esc(x) + "</li>").join("");
+  mostraVista("vista-intro");
+}
+
+// ---------------- Andatura dichiarata (v0.8) ----------------
+// L'equipaggio dichiara andatura e mure; con la rotta l'app ricava da dove viene il vento.
+// Bolina stretta: partono le stime continue dei salti. Le altre andature: il vento di riferimento si aggiorna
+// se si scosta di più di 10° da quello che l'app stava usando (altrimenti resta quello, più preciso).
+function apriAndatura() {
+  st.andaturaAperta = true; $("richiesta-andatura").hidden = true; disegnaAndatura();
+}
+function disegnaAndatura() {
+  const p = $("pannello-andatura");
+  p.hidden = !st.andaturaAperta;
+  if (!st.andaturaAperta) return;
+  const nav = smoothNav(st.fixes), sv = statoVento(), W = Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir;
+  const att = fixVivo() && nav.cog !== null && Number.isFinite(W) ? andatura(nav.cog, W) : null;
+  $("andatura-info").textContent = (fixVivo() && nav.cog !== null ? "Rotta " + angolo(nav.cog) : "Rotta non disponibile") + (att ? " · per l'app: " + att.nome.toLowerCase() + ", mure a " + att.mura : "") + ".";
+  html("griglia-andature", '<span class="intestazione">Mure a sinistra</span><span class="intestazione">Mure a dritta</span>' +
+    ANDATURE.map(n => ["sinistra", "dritta"].map(m => '<button type="button" data-andatura="' + n + '|' + m + '"' + (att && att.nome === n && att.mura === m ? ' class="attuale"' : "") + ">" + n + "</button>").join("")).join(""));
+}
+function dichiaraAndatura(nome, mura) {
+  const c = rottaPerTaratura(); if (c === null) return;
+  const adesso = Date.now(), t = tar(), sv = statoVento(adesso);
+  const angoloBolina = Number.isFinite(t.off?.[mura]) ? Math.abs(t.off[mura]) : (s.barca.angoloVirata || 90) / 2;
+  const nuovo = ventoDaAndatura(c, nome, mura, angoloBolina);
+  const prima = Number.isFinite(sv.medio) ? sv.medio : t.dir;
+  s.vento.andatura = {nome, mura, t: adesso, cog: Math.round(c)};
+  st.ultimaRichiesta = adesso; st.andaturaAperta = false;
+  let msg;
+  if (prima === null || Math.abs(delta(nuovo, prima)) > 10) {
+    s.vento.iniziale = {dir: Math.round(nuovo), metodo: "andatura", andatura: nome, t: adesso};
+    s.vento.campioni = []; s.vento.rotazione = null; st.allScarso = null;
+    msg = "Vento aggiornato: da " + angolo(nuovo) + (prima === null ? "" : " (prima " + angolo(prima) + ")") + ".";
+  } else msg = "Andatura confermata: il vento resta da " + angolo(prima) + ".";
+  if (nome === "Bolina stretta") { s.vento.bolina = true; st.poggiataDa = null; msg += " In bolina stretta l'app stima i salti di vento."; }
+  else s.vento.bolina = false;
+  evento("Andatura dichiarata: " + nome.toLowerCase() + ", mure a " + mura + " · rotta " + angolo(c) + " · " + msg);
+  avvisa(msg); salvaPresto(); disegnaAndatura(); aggiorna();
+}
+// Richiesta periodica di conferma dell'andatura.
+function controllaRichiesta(adesso) {
+  const r = $("richiesta-andatura"), min = s.vento.imp.promemoriaMin || 0;
+  const nav = smoothNav(st.fixes);
+  const possibile = st.vista === "vista-nav" && ["navigazione", "allenamento", "regata"].includes(st.modo) && min > 0 && fixVivo() &&
+    nav.sog !== null && nav.sog >= 1.5 && !s.vento.bolina && !st.disegno && !st.andaturaAperta && !st.cronoAperto;
+  if (!possibile) { if (!st.andaturaAperta) r.hidden = true; return; }
+  if (!st.ultimaRichiesta) st.ultimaRichiesta = adesso;
+  if (r.hidden && adesso - st.ultimaRichiesta < min * 60000) return;
+  const sv = statoVento(adesso), W = Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir, a = Number.isFinite(W) && nav.cog !== null ? andatura(nav.cog, W) : null;
+  if (r.hidden) { try { navigator.vibrate?.([120]); } catch {} }
+  r.hidden = false;
+  r.dataset.andatura = a ? a.nome + "|" + a.mura : "";
+  $("richiesta-testo").textContent = a ? "Andatura: " + a.nome.toLowerCase() + ", mure a " + a.mura + "?" : "Che andatura stai tenendo?";
+  $("richiesta-giusta").hidden = !a;
+  $("richiesta-cambia").textContent = a ? "Cambia" : "Dichiara";
 }
 
 // ---------------- Azioni di regata ----------------
@@ -917,7 +1021,7 @@ function disegnaNav() {
   if (s.tappa === 0 && !s.arrivo.taglio && Number.isFinite(W)) {
     const lp = lineaPartenza(s.boe), lf = lp && latoFavorito(lp[0], lp[1], W);
     const vicino = lp && barca && distanceMeters(barca, {lat: (lp[0].lat + lp[1].lat) / 2, lon: (lp[0].lon + lp[1].lon) / 2}) < 500;
-    if (lf && vicino) tattica.push(lf.favorito === "neutra" ? "Linea neutra" : "Linea: favorita " + (lf.favorito === "P" ? "la boa P" : "la barca CdR") + " (+" + Math.round(lf.vantaggio) + " m)");
+    if (lf && vicino) tattica.push(lf.favorito === "neutra" ? "Linea neutra" : "Linea: " + (lf.favorito === "P" ? "favorito il pin" : "favorita la barca comitato") + " (+" + Math.round(lf.vantaggio) + " m)");
   }
   if (off && Number.isFinite(W) && rlv !== null && barca && !s.arrivo.taglio) {
     const bf = bordoFavorevole(rlv, W, off);
@@ -978,9 +1082,11 @@ function disegnaNav() {
   b.textContent = attivo ? "Spegni GPS" : "Accendi GPS";
   b.classList.toggle("attivo", attivo);
   const inRegata = attivo && !s.arrivo.taglio && ob.tappa;
-  const bb = $("btn-bolina");
-  bb.hidden = !attivo || modo === "polari" || modo === "navigazione"; bb.setAttribute("aria-pressed", String(!!s.vento.bolina));
-  bb.textContent = s.vento.bolina ? "BOLINA STRETTA ✓" : "Bolina stretta: no";
+  const ba = $("btn-andatura");
+  ba.hidden = !attivo || modo === "polari" || !modo; ba.setAttribute("aria-pressed", String(!!s.vento.bolina));
+  ba.textContent = s.vento.bolina ? "BOLINA STRETTA ✓" : s.vento.andatura ? "Andatura: " + s.vento.andatura.nome.toLowerCase() : "Andatura";
+  $("btn-disegna-mappa").hidden = !corsa;
+  $("btn-disegna-mappa").classList.toggle("attivo", !!st.disegno);
   $("btn-traguardo").hidden = !(corsa && ob.tappa?.tipo === "arrivo" && !s.arrivo.taglio && attivo);
   $("btn-passata").hidden = !(corsa && inRegata && ob.tappa.tipo !== "arrivo");
   if (ob.tappa) $("btn-passata").textContent = ob.tappa.tipo === "cancello" ? "Cancello passato ›" : ob.tappa.opzionale ? ob.tappa.codice + " passata o assente ›" : "Boa " + ob.tappa.codice + " passata ›";
@@ -1050,19 +1156,25 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
     }
   }
   if (Number.isFinite(vento.W)) {
-    out += '<g transform="translate(' + (W - 92) + ' 34) rotate(' + f1(vento.W + 180) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
+    out += '<g transform="translate(' + (W - 92) + ' 34) rotate(' + f1(vento.W) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
     out += '<text x="' + (W - 92) + '" y="68" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">VENTO ' + angolo(vento.W) + "</text>";
   }
 
   const etichette = [];
   for (const b of campo ? s.boe : []) {
     if (!b.pos) continue;
-    const p = xy(b.pos), corrente = ob?.boa === b, certo = b.pos.fonte === "gps", virtuale = b.pos.fonte === "disegnata";
-    if (corrente) out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="17" fill="none" stroke="#ff0000" stroke-width="3"/>';
-    if (st.disegno && st.selezionata === b.codice) out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="22" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="5 4"/>';
-    out += virtuale ? '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="9" fill="#000" stroke="#ff0000" stroke-width="3" stroke-dasharray="4 3"/>'
-      : '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="9" fill="' + (certo ? "#fff" : "#101010") + '" stroke="' + (certo ? "#ff0000" : "#fff") + '" stroke-width="2.5"/>';
-    etichette.push({x: p.x + 13, y: p.y - 13, testo: b.codice + (certo || virtuale ? "" : b.pos.fonte === "istruzioni" ? " (IdR)" : " ~")});
+    const p = xy(b.pos), corrente = ob?.boa === b, certo = b.pos.fonte === "gps", virtuale = b.pos.fonte === "disegnata", scelta = st.disegno && st.selezionata === b.codice;
+    const cx = f1(p.x), cy = f1(p.y);
+    if (b.codice === "CdR") {
+      // Barca comitato: una barchetta bianca con la prua al vento, come all'ancora.
+      const rot = Number.isFinite(vento.W) ? vento.W : 0;
+      out += '<g transform="translate(' + cx + " " + cy + ") rotate(" + f1(rot) + ')"><path d="M0 -13 C6 -7 7 3 5 11 L-5 11 C-7 3 -6 -7 0 -13Z" fill="#fff" stroke="' + (scelta ? "#ff0000" : "#000") + '" stroke-width="' + (scelta ? 3 : 1.5) + '"/></g>';
+    } else {
+      // Boa: cerchio pieno con un anello intorno; anello rosso per la prossima boa (o per quella scelta mentre si disegna).
+      out += '<circle cx="' + cx + '" cy="' + cy + '" r="12" fill="none" stroke="' + (corrente || scelta ? "#ff0000" : "#fff") + '" stroke-width="' + (corrente || scelta ? 3 : 2) + '"/>';
+      out += '<circle cx="' + cx + '" cy="' + cy + '" r="5.5" fill="#ff0000"/>';
+    }
+    etichette.push({x: p.x + 15, y: p.y - 15, testo: (b.codice === "P" ? "Pin" : b.codice) + (certo || virtuale ? "" : b.pos.fonte === "istruzioni" ? " (IdR)" : " ~")});
   }
   if (ob && (ob.fonte === "linea" || ob.fonte === "estremo") && ob.pos) { const p = xy(ob.pos); out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="15" fill="none" stroke="#ff0000" stroke-width="3"/>'; }
   if (campo && s.arrivo.taglio?.lat != null) { const p = xy(s.arrivo.taglio); out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="7" fill="#fff"/><circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="16" fill="none" stroke="#fff" stroke-width="2.5"/>'; }
@@ -1186,10 +1298,10 @@ function disegnaVento() {
     : "Vento di riferimento " + angolo(t.dir) + " (" + metodo + "). Boline registrate: dritta " + (v.rif.dritta ? angolo(v.rif.dritta.cog) : "—") + ", sinistra " + (v.rif.sinistra ? angolo(v.rif.sinistra.cog) : "—") +
       ". Angolo di virata " + Math.round(t.angoloVirata) + "°, " + (t.misurato ? "misurato." : "predefinito (per misurarlo registra le due boline).");
   const lp = lineaPartenza(s.boe), lf = lp && Number.isFinite(sv.medio) ? latoFavorito(lp[0], lp[1], sv.medio) : null;
-  $("linea-stato").textContent = !lp ? "Segna con il GPS la barca CdR e la boa P nella sezione Boe, qui sopra."
+  $("linea-stato").textContent = !lp ? "Segna con il GPS (o disegna sulla mappa) la barca comitato e il pin, nella sezione Boe qui sopra."
     : !lf ? "Tara il vento per sapere quale estremo è favorito."
     : lf.favorito === "neutra" ? "Linea neutra (sbilanciamento sotto i 2°). Lunga " + Math.round(lf.lunghezza) + " m."
-    : "Favorita " + (lf.favorito === "P" ? "la boa P" : "la barca CdR") + ": " + Math.round(lf.sbilanciamento) + "° di sbilanciamento, " + Math.round(lf.vantaggio) + " m più sopravvento (" +
+    : (lf.favorito === "P" ? "Favorito il pin" : "Favorita la barca comitato") + ": " + Math.round(lf.sbilanciamento) + "° di sbilanciamento, " + Math.round(lf.vantaggio) + " m più sopravvento (" +
       numero(lf.vantaggio / s.barca.lunghezza, 1) + " lunghezze). Linea lunga " + Math.round(lf.lunghezza) + " m. Ricorda: l'aria libera conta più dell'estremo favorito se lo sbilanciamento è piccolo.";
   $("imp-soglia").value = String(v.imp.soglia); $("imp-durata").value = String(v.imp.durataS); $("imp-media").value = String(v.imp.mediaMin);
   if (document.activeElement !== $("imp-lunghezza")) $("imp-lunghezza").value = String(s.barca.lunghezza);
@@ -1275,6 +1387,7 @@ function disegnaAltro() {
   const t = $("btn-traccia");
   t.setAttribute("aria-pressed", String(st.mostraTraccia));
   t.textContent = "Traccia sulla mappa: " + (st.mostraTraccia ? "sì" : "no");
+  $("imp-promemoria").value = String(s.vento.imp.promemoriaMin ?? 3);
   $("registro").innerHTML = s.eventi.slice(0, 40).map(e => "<li><b>" + ora(e.t) + "</b> " + esc(e.testo) + "</li>").join("") || "<li>Nessun evento.</li>";
 }
 
@@ -1317,7 +1430,7 @@ $("nuova-aggiungi").addEventListener("click", () => {
 // ---------------- Collegamenti dei pulsanti ----------------
 function mostraVista(id) {
   st.vista = id;
-  for (const v of ["vista-home", "vista-guida", "vista-nav", "vista-regata", "vista-polari", "vista-altro"]) $(v).hidden = v !== id;
+  for (const v of ["vista-home", "vista-intro", "vista-guida", "vista-nav", "vista-regata", "vista-polari", "vista-altro"]) $(v).hidden = v !== id;
   disegnaSchede(); disegnaViste(); aggiorna();
   $(id).scrollTop = 0;
 }
@@ -1396,12 +1509,18 @@ $("btn-nuova").addEventListener("click", () => {
 
 new ResizeObserver(aggiorna).observe(carta);
 // Collegamenti della Fase 3
-$("btn-bolina").addEventListener("click", () => {
-  s.vento.bolina = !s.vento.bolina;
-  evento(s.vento.bolina ? "Bolina stretta confermata" : "Bolina stretta terminata");
-  if (s.vento.bolina && !tar().off) avvisa("Bolina confermata, ma il vento non è tarato: prima fai la prua al vento a motore.");
-  salvaPresto(); aggiorna();
+$("btn-andatura").addEventListener("click", () => { if (st.andaturaAperta) { st.andaturaAperta = false; disegnaAndatura(); } else apriAndatura(); });
+$("andatura-chiudi").addEventListener("click", () => { st.andaturaAperta = false; disegnaAndatura(); });
+$("griglia-andature").addEventListener("click", e => { const b = e.target.closest("[data-andatura]"); if (b) { const [n, m] = b.dataset.andatura.split("|"); dichiaraAndatura(n, m); } });
+$("richiesta-giusta").addEventListener("click", () => {
+  const [n, m] = ($("richiesta-andatura").dataset.andatura || "|").split("|");
+  st.ultimaRichiesta = Date.now(); $("richiesta-andatura").hidden = true;
+  if (n) { s.vento.andatura = {nome: n, mura: m, t: Date.now()}; evento("Andatura confermata: " + n.toLowerCase() + ", mure a " + m); salvaPresto(); }
+  aggiorna();
 });
+$("richiesta-cambia").addEventListener("click", apriAndatura);
+$("btn-disegna-mappa").addEventListener("click", () => { if (st.disegno) fineDisegno(); else avviaDisegno(); aggiorna(); });
+$("imp-promemoria").addEventListener("change", e => { s.vento.imp.promemoriaMin = Number(e.target.value); st.ultimaRichiesta = Date.now(); salvaPresto(); });
 $("allarme-ok").addEventListener("click", () => {
   if ($("allarme").dataset.tipo === "scarso" && st.allScarso) { st.allScarso.riconosciuto = true; evento("Allarme scarso visto"); }
   else if (s.vento.rotazione) { const m = statoVento().medio; s.vento.rotazione = {riferimento: m, inizio: null, attivo: false, rotazione: 0}; evento("Nuovo riferimento del vento medio: " + angolo(m)); salvaPresto(); }
@@ -1477,7 +1596,9 @@ $("pol-azzera").addEventListener("click", () => {
 });
 
 // Pagina iniziale e preparazione
-document.querySelectorAll("[data-modo-app]").forEach(b => b.addEventListener("click", () => entraModo(b.dataset.modoApp)));
+document.querySelectorAll("[data-modo-app]").forEach(b => b.addEventListener("click", () => mostraIntro(b.dataset.modoApp)));
+$("intro-conferma").addEventListener("click", () => entraModo(st.modoProposto));
+$("intro-indietro").addEventListener("click", () => mostraVista("vista-home"));
 $("home-altro").addEventListener("click", () => { st.modo = null; mostraVista("vista-altro"); });
 $("guida-passi").addEventListener("click", e => { const b = e.target.closest("[data-guida]"); if (b) azioneGuida(b.dataset.guida); });
 $("guida-vai").addEventListener("click", () => mostraVista("vista-nav"));
@@ -1493,7 +1614,7 @@ $("cr-parziale").addEventListener("click", () => comandoCronometro("parziale"));
 $("cr-azzera").addEventListener("click", () => comandoCronometro("azzera"));
 $("imp-dieci").addEventListener("click", () => { s.timer.ultimi10 = !s.timer.ultimi10; if (s.timer.ultimi10) suono("breve"); salvaPresto(); disegnaVento(); });
 $("btn-disegna").addEventListener("click", avviaDisegno);
-document.querySelectorAll("[data-metti]").forEach(b => b.addEventListener("click", () => { st.disegno.metti = b.dataset.metti; disegnaBarra(); }));
+document.querySelectorAll("[data-metti]").forEach(b => b.addEventListener("click", () => { st.disegno.metti = b.dataset.metti; disegnaBarra(); avvisa($("disegno-aiuto").textContent); }));
 $("disegno-annulla").addEventListener("click", annullaDisegno);
 $("disegno-togli").addEventListener("click", togliSelezionata);
 $("disegno-fine").addEventListener("click", fineDisegno);

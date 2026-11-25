@@ -55,7 +55,7 @@ test("distanza-tempo: lato del percorso dal vento, anticipo, oltre la linea", ()
   const via = distanzaTempo({barca, cog: 180, sog: 5, linea: [cdr, p], dirVento: vento});
   assert.equal(via.secondi, null); assert.ok(via.verso < 0);
   const lato = distanzaTempo({barca: move(move(centro, 90, 120), 180, 30), cog: 0, sog: 4, linea: [cdr, p], dirVento: vento});
-  assert.equal(lato.fuori, "fuori dalla linea, lato CdR");
+  assert.equal(lato.fuori, "fuori dalla linea, lato comitato");
   const senzaVento = distanzaTempo({barca, cog: 0, sog: 5, linea: [cdr, p]});
   assert.ok(Math.abs(senzaVento.distanza - 100) < 0.5 && senzaVento.secondi > 0 && senzaVento.orientata === false);
 });
