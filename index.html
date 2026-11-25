@@ -5,23 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.8">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./app.css?v=0.9">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.8</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small><span class="labs">Round Robin Labs™</span><span id="versione"></span></small></div>
+    <button type="button" class="btn-intero" id="btn-intero" aria-label="Schermo intero" hidden>⛶</button>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
+  <div class="gira" id="gira" aria-live="polite"><div><b>↻</b><p>Gira il telefono in verticale.</p></div></div>
+
   <!-- PAGINA INIZIALE -->
   <main class="vista scorre" id="vista-home">
-    <button type="button" class="modo-app" data-modo-app="navigazione">Navigazione</button>
-    <button type="button" class="modo-app" data-modo-app="allenamento">Allenamento</button>
-    <button type="button" class="modo-app" data-modo-app="regata">Regata</button>
-    <button type="button" class="modo-app" data-modo-app="polari">Polari</button>
+    <button type="button" class="modo-app" data-modo-app="navigazione">NAVIGAZIONE</button>
+    <button type="button" class="modo-app" data-modo-app="allenamento">ALLENAMENTO</button>
+    <button type="button" class="modo-app" data-modo-app="regata">REGATA</button>
+    <button type="button" class="modo-app" data-modo-app="polari">POLARI</button>
     <a class="secondario largo guida-link" href="./guida/">Guida all'app</a>
     <button type="button" class="secondario largo" id="home-altro">File, registro e impostazioni</button>
     <p class="aiuto" id="home-stato">—</p>
@@ -46,6 +50,7 @@
     </section>
     <ol class="guida-passi" id="guida-passi"></ol>
     <button type="button" class="principale largo" id="guida-vai">Vai agli strumenti</button>
+    <button type="button" class="reset largo" id="guida-reset">Reset</button>
   </main>
 
   <!-- NAVIGAZIONE -->
@@ -204,7 +209,7 @@
       <p class="aiuto">Tocca una tappa per farla diventare la prossima.</p>
       <details class="configura allenamento" id="allenamento">
         <summary>Campo d'allenamento (boe virtuali)</summary>
-        <p class="aiuto">Per gli esercizi senza boe vere: l'app costruisce il campo intorno alla barca, orientato sul vento. Le boe sono virtuali e l'app le gestisce come in regata. Poi puoi spostarle o aggiungerne con «Disegna sulla mappa».</p>
+        <p class="aiuto">Campo costruito intorno alla barca, orientato sul vento. Le boe si spostano con «Disegna».</p>
         <div class="scelte due" id="all-tipo">
           <button type="button" data-tipo="partenza" aria-pressed="true">Solo partenza</button>
           <button type="button" data-tipo="bolina" aria-pressed="false">Partenza e bolina</button>
@@ -250,7 +255,7 @@
         <button type="button" class="secondario" id="tar-dritta">Bolina mure a dritta</button>
         <button type="button" class="secondario" id="tar-sinistra">Bolina mure a sinistra</button>
       </div>
-      <p class="aiuto">Facoltativo, per ora: in bolina stretta ben regolata e con rotta costante, premi il pulsante della mura su cui sei, poi fai lo stesso sull'altra mura. L'app misura così l'angolo di virata reale della barca, che serve per le lay-line.</p>
+      <p class="aiuto">Facoltativo: in bolina stretta, rotta costante, premi la mura su cui sei, poi l'altra. Misura l'angolo di virata per le lay-line.</p>
       <div class="riga-mano">
         <label>Vento a mano <input id="tar-mano" type="number" inputmode="numeric" min="0" max="359" placeholder="gradi"></label>
         <button type="button" class="secondario" id="tar-mano-ok">Imposta</button>
@@ -319,7 +324,7 @@
       <p class="tar-stato" id="pol-vento-stato">—</p>
       <p class="sotto-titolo">Direzione</p>
       <button type="button" class="secondario largo" id="pol-motore">Prua al vento a motore: memorizza</button>
-      <p class="aiuto">Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi. Quando la taratura supera il limite scelto in fondo alla pagina, la registrazione va in pausa: ritara per tempo.</p>
+      <p class="aiuto">A motore: prua al vento, rotta costante 10 secondi, poi premi. Oltre il limite (in fondo alla pagina) la registrazione va in pausa.</p>
       <p class="sotto-titolo">Intensità (anemometro di coperta, a barca ferma)</p>
       <div class="riga-vento">
         <button type="button" class="passo" data-passo="-1" aria-label="Un nodo in meno">−</button>
@@ -327,7 +332,7 @@
         <button type="button" class="passo" data-passo="1" aria-label="Un nodo in più">+</button>
       </div>
       <button type="button" class="principale largo" id="pol-tws-ok">Inserisci il vento</button>
-      <p class="aiuto">A barca ferma l'anemometro legge il vento vero; in navigazione legge il vento apparente, quindi non usarlo a vela. Leggilo sempre nello stesso punto, il più in alto possibile e lontano dalle vele.</p>
+      <p class="aiuto">A barca ferma l'anemometro legge il vento vero; a vela no. Leggilo sempre nello stesso punto.</p>
     </section>
 
     <section class="blocco">
@@ -339,7 +344,7 @@
       <div class="scelte tre" id="pol-randa"></div>
       <p class="sotto-titolo">Vele colorate</p>
       <div class="scelte" id="pol-portante"></div>
-      <p class="aiuto">Dopo un cambio di vele l'app aspetta un minuto prima di registrare: il tempo di regolarle.</p>
+      <p class="aiuto">Dopo un cambio di vele l'app aspetta un minuto.</p>
     </section>
 
     <section class="blocco">
@@ -351,7 +356,7 @@
       <p class="tar-stato" id="pol-ottimi">—</p>
       <button type="button" class="secondario largo" id="pol-usa-virata" hidden>Usa questo angolo di virata in regata</button>
       <table class="tabella-polare" id="pol-tabella"></table>
-      <p class="aiuto">Velocità sul fondo. In ogni casella l'app prende la velocità superata solo dal 20% dei punti (80° percentile): è la velocità della barca ben condotta, senza le punte dovute alle onde. Servono almeno 30 secondi di navigazione stabile per casella; con meno dati il valore è tra parentesi. D/S: punti con mure a dritta e a sinistra. Naviga ogni angolo su tutte e due le mure, così l'effetto della corrente si compensa.</p>
+      <p class="aiuto">Velocità sul fondo (80° percentile). Servono 30 secondi stabili per casella; con meno dati il valore è tra parentesi. D/S: punti per mura.</p>
     </section>
 
     <section class="blocco">
@@ -366,7 +371,7 @@
         <button type="button" class="secondario" id="pol-importa">Importa</button>
         <input type="file" id="pol-file" accept=".json,application/json" hidden>
       </div>
-      <p class="aiuto">Esporta: tutti i punti, da mandare per l'analisi. Tabella: la polare da aprire con un foglio di calcolo. Importa: aggiunge i punti di un altro file, senza doppioni. Le polari restano sul telefono anche con «Nuova sessione».</p>
+      <p class="aiuto">Esporta: tutti i punti. Tabella: per il foglio di calcolo. Importa: aggiunge i punti di un altro file. Le polari restano anche dopo un reset.</p>
       <button type="button" class="secondario largo" id="pol-scarta">Scarta gli ultimi 5 minuti</button>
       <button type="button" class="collegamento-testo" id="pol-azzera">Cancella tutte le polari</button>
     </section>
@@ -376,21 +381,23 @@
   <main class="vista scorre" id="vista-altro" hidden>
     <section class="blocco">
       <h2>SCHERMO E MAPPA</h2>
+      <button type="button" class="interruttore" id="imp-intero" aria-pressed="true">Schermo intero: sì</button>
       <div class="impostazioni"><label>Chiedi di confermare l'andatura ogni <select id="imp-promemoria"><option value="0">mai</option><option value="3">3 minuti</option><option value="5">5 minuti</option><option value="10">10 minuti</option></select></label></div>
-      <p class="aiuto">La richiesta compare in navigazione, allenamento e regata, solo quando la barca è in movimento e non sei in bolina stretta.</p>
+      <p class="aiuto">Solo con la barca in movimento e fuori dalla bolina stretta.</p>
       <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
-      <p class="aiuto">A schermo spento il telefono smette di leggere il GPS: in navigazione tienilo acceso.</p>
+      <p class="aiuto">A schermo spento il GPS si ferma.</p>
       <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia sulla mappa: no</button>
     </section>
     <section class="blocco">
       <h2>SESSIONE</h2>
-      <p class="aiuto">Tutto si salva da solo su questo telefono. Esporta un file per conservarlo o per spostarlo su un altro dispositivo.</p>
+      <p class="aiuto">Tutto si salva da solo sul telefono. Esporta un file per conservarlo.</p>
       <div class="riga-pulsanti">
         <button type="button" class="secondario" id="btn-esporta">Esporta</button>
         <button type="button" class="secondario" id="btn-importa">Importa</button>
         <input type="file" id="file-importa" accept=".json,application/json" hidden>
       </div>
-      <button type="button" class="secondario largo" id="btn-nuova">Nuova sessione</button>
+      <button type="button" class="reset largo" id="btn-nuova">Reset generale</button>
+      <button type="button" class="secondario largo" id="btn-annulla-reset" hidden>Annulla l'ultimo reset</button>
     </section>
     <section class="blocco">
       <h2>REGISTRO</h2>
@@ -406,6 +413,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.8"></script>
+<script type="module" src="./js/app.mjs?v=0.9"></script>
 </body>
 </html>

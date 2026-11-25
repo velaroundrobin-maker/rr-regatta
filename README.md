@@ -4,6 +4,14 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.9 — reset, schermo intero, solo verticale
+
+- Reset in fondo alla Preparazione di ogni modalità e Reset generale nelle impostazioni, con «Annulla l'ultimo reset» (copia salvata prima di ogni reset).
+- Schermo intero entrando in una modalità (pulsante ⛶ per riattivarlo; si disattiva nelle impostazioni); manifest per l'installazione a schermo intero e in verticale.
+- Solo verticale: in orizzontale compare «Gira il telefono in verticale»; a schermo intero l'orientamento è bloccato.
+- Andatura e timer si chiudono da soli premendo un altro pulsante.
+- Pagina iniziale in maiuscolo; marchio «Round Robin Labs™» nell'intestazione; testi più asciutti.
+
 ## Versione 0.8 — andatura dichiarata, pagina iniziale essenziale, disegno dalla mappa
 
 - Pagina iniziale con le sole quattro modalità; toccandone una compare la spiegazione con «Conferma».

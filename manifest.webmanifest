@@ -1,0 +1,15 @@
+{
+  "name": "RR Regatta · Round Robin Labs",
+  "short_name": "RR Regatta",
+  "description": "Strumentazione di bordo e tattica di regata con il GPS del telefono.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {"src": "round-robin-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

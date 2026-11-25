@@ -1,5 +1,5 @@
 // Sessione di regata: creazione, cambio modello senza perdere le posizioni, salvataggio e verifica dei file.
-import {MODELLI} from "./campo.mjs?v=0.8";
+import {MODELLI} from "./campo.mjs?v=0.9";
 
 export const CHIAVE = "rr-regatta-sessione-v1";
 const copia = x => JSON.parse(JSON.stringify(x));
@@ -14,7 +14,7 @@ export function nuovaSessione(modello = "loano-1", adesso = Date.now()) {
     arrivo: {ugualePartenza: m.arrivo.ugualePartenza, etichette: [...m.arrivo.etichette], estremi: {a: null, b: null}, taglio: null},
     eventi: [], traccia: [], registro: [],
     vento: nuovoVento(), barca: {lunghezza: 10, angoloVirata: 90},
-    timer: nuovoTimer(), cronometro: nuovoCrono()
+    timer: nuovoTimer(), cronometro: nuovoCrono(), preferenze: {schermoIntero: true}
   };
 }
 export const nuovoTimer = (ultimi10 = false) => ({zero: null, ultimi10, partenza: null});
@@ -58,6 +58,7 @@ export function verifica(obj) {
   obj.barca = {lunghezza: 10, angoloVirata: 90, ...(obj.barca || {})};
   obj.timer = {...nuovoTimer(), ...(obj.timer || {})};
   obj.cronometro = {...nuovoCrono(), ...(obj.cronometro || {})};
+  obj.preferenze = {schermoIntero: true, ...(obj.preferenze || {})};
   for (const b of obj.boe) { b.storico ??= []; b.osservazioni ??= []; b.pos ??= null; }
   return obj;
 }

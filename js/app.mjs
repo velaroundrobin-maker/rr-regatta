@@ -1,17 +1,17 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.8";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.8";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.8";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.9";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.9";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.9";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.8";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.8";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.8";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.9";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.9";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.9";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.8";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.9";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.8";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.9";
 
-const VERSIONE = "0.8";
+const VERSIONE = "0.9";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -26,7 +26,7 @@ const oraBreve = t => new Date(t).toLocaleTimeString("it-IT", {hour: "2-digit", 
 function mostraErrore(testo) { const el = $("avviso-errore"); el.textContent = "Errore del programma: " + testo; el.hidden = false; }
 addEventListener("error", e => mostraErrore(e.message || "sconosciuto"));
 addEventListener("unhandledrejection", e => mostraErrore((e.reason && e.reason.message) || String(e.reason)));
-$("versione").textContent = "versione " + VERSIONE;
+$("versione").textContent = "";
 
 // ---------------- Sessione salvata ----------------
 const memoria = (() => { try { const m = window.localStorage; m.getItem("x"); return m; } catch { const d = new Map(); return {getItem: k => d.get(k) ?? null, setItem: (k, v) => d.set(k, v)}; } })();
@@ -312,7 +312,7 @@ function disegnaPolariVivo() {
   $("pol-rif-nota").textContent = vp && vivo ? Math.round(st.fix.sog / vp * 100) + "% della polare" : classe ? "ancora pochi dati" : " ";
   $("pol-vento-stato").textContent = "Direzione: " + (t.dir === null ? "da tarare" : angolo(t.dir) + ", " + fonteVento(t, true) + (t.t ? " " + etaTesto(adesso - t.t) : "")) +
     ". Intensità: " + (pol.vento ? numero(pol.vento.tws, 1) + " nodi, inserita " + etaTesto(adesso - pol.vento.t) : "da inserire") + ".";
-  $("versione").textContent = "versione " + VERSIONE + (st.polRegistra ? " · polari" : "");
+  $("versione").textContent = st.polRegistra ? " · polari" : "";
   $("versione").className = st.polRegistra ? "registra" : "";
 }
 function disegnaPolari() {
@@ -643,6 +643,7 @@ function vaiAllaHome() {
 }
 async function entraModo(m) {
   st.modo = m; st.ultimaRichiesta = Date.now(); st.andaturaAperta = false;
+  if (s.preferenze.schermoIntero && puoIntero()) schermoIntero(true);
   if (!gpsAttivo() && st.fase !== "errore") avviaGps();
   // Entrando in una modalità lo schermo resta acceso da solo (si spegne in «File, registro e impostazioni»).
   if ("wakeLock" in navigator && !st.wakeLock) { st.vuoleSchermo = true; chiediSchermo(); }
@@ -655,15 +656,14 @@ function disegnaHome() {
 }
 
 // Passi della preparazione: titolo, spiegazione, stato, fatto sì/no, pulsanti [azione, testo, principale?].
-const passoGps = () => ({titolo: "GPS", testo: "Rotta e velocità vengono dal GPS del telefono. Si accende da solo: all'aperto la prima posizione arriva in pochi secondi.",
+const passoGps = () => ({titolo: "GPS", testo: "Si accende da solo.",
   fatto: fixVivo(), stato: fixVivo() ? "Posizione ricevuta." : gpsAttivo() ? "Ricerca della posizione…" : st.problema || "GPS spento.",
   azioni: gpsAttivo() ? [] : [["gps", "Accendi il GPS", true]]});
-const passoSchermo = () => ({titolo: "Schermo sempre acceso", testo: "A schermo spento il telefono smette di leggere il GPS e il timer non suona. L'app tiene lo schermo acceso da sola: tieni il telefono in carica.",
+const passoSchermo = () => ({titolo: "Schermo sempre acceso", testo: "Resta acceso da solo. Tieni il telefono in carica.",
   fatto: !!st.wakeLock, stato: st.wakeLock ? "Lo schermo resta acceso." : "Lo schermo può spegnersi.", azioni: st.wakeLock ? [] : [["schermo", "Tieni acceso lo schermo", true]]});
 function passoVento(perche, conAndatura = true) {
   const t = tar(), ok = t.dir !== null;
-  return {titolo: "Direzione del vento", testo: perche + " Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi." +
-    (conAndatura ? " In alternativa, a vela, dichiara l'andatura e le mure: l'app ricava il vento dalla rotta (meno preciso)." : ""),
+  return {titolo: "Direzione del vento", testo: perche + " A motore: prua al vento, rotta costante 10 secondi, poi premi." + (conAndatura ? " A vela: dichiara l'andatura." : ""),
     fatto: ok, stato: t.dir === null ? "Vento non tarato." : "Vento da " + angolo(t.dir) + ", " + fonteVento(t) + (t.t ? " " + etaTesto(Date.now() - t.t) : "") +
       (t.misurato ? " · angolo di virata " + Math.round(t.angoloVirata) + "°." : "."),
     azioni: [["motore", t.dir === null ? "Prua al vento a motore: memorizza" : "Ritara: prua al vento a motore", t.dir === null], ...(conAndatura ? [["andatura", "Dichiara l'andatura"]] : [])]};
@@ -674,50 +674,50 @@ const passoTimer = testo => ({titolo: "Timer di partenza", facoltativo: true, te
 function primaBoa() { const t = tappe(s.campo.sequenza).find(x => x.tipo === "boa"); return t ? trovaBoa(s.boe, t.codice) : null; }
 function passiModo(m) {
   if (m === "navigazione") return [passoGps(), passoSchermo(),
-    passoVento("Serve per il vento e l'andatura (bolina, traverso, lasco, poppa). Se non ti interessa, puoi saltare questo passo.")];
+    passoVento("Serve per vento e andatura.")];
   if (m === "allenamento") {
     const campo = s.campo.modello === "allenamento" && s.boe.some(b => b.pos);
     return [passoGps(), passoSchermo(),
-      passoVento("Serve a orientare le boe virtuali sul vento e a stimare i salti."),
-      {titolo: "Boe", facoltativo: true, testo: "Ti servono delle boe? Le boe virtuali sono punti sulla mappa che l'app ti fa girare come boe vere. Si costruiscono intorno alla barca, orientate sul vento: linea di 100 m e boa di bolina a 400 m (le misure si cambiano nella scheda «Campo»). Poi puoi spostarle o aggiungerne disegnando sulla mappa.",
+      passoVento("Orienta le boe sul vento."),
+      {titolo: "Boe", facoltativo: true, testo: "Campi pronti intorno alla barca, orientati sul vento (linea 100 m, bolina 400 m), oppure disegnati.",
         fatto: campo, stato: campo ? s.campo.nome + " · " + s.campo.sequenza : "Nessun campo d'allenamento.",
         azioni: [["campo:partenza", "Solo partenza"], ["campo:bolina", "Partenza e bolina"], ["campo:bastone", "Bastone"], ["campo:dueboe", "Due boe"], ["disegna", "Le disegno io"]]},
-      passoTimer("Per le prove di partenza: parte da −5:00, fa un beep lungo a ogni minuto e una raffica di beep allo zero. Con la linea segnata ti dice metri, secondi e anticipo o ritardo. Nella stessa finestra c'è il cronometro.")];
+      passoTimer("Da −5:00, beep a ogni minuto e raffica allo zero. Con la linea: distanza e anticipo.")];
   }
   if (m === "regata") {
     const lp = lineaPartenza(s.boe), b = primaBoa();
     const cdr = trovaBoa(s.boe, "CdR")?.pos?.fonte === "gps", p = trovaBoa(s.boe, "P")?.pos?.fonte === "gps";
     return [passoGps(), passoSchermo(),
-      {titolo: "Percorso", testo: "Scegli il percorso delle istruzioni di regata (Loano, Alassio) oppure costruiscilo disegnando sulla mappa.",
+      {titolo: "Percorso", testo: "Dalle istruzioni di regata o disegnato.",
         fatto: true, stato: s.campo.nome + " · " + s.campo.sequenza, azioni: [["vai:vista-regata:configura", "Scegli il percorso"], ["disegna", "Disegna sulla mappa"]]},
-      {titolo: "Linea di partenza", testo: "Passa vicino alla barca comitato e premi «Segna comitato», poi vicino al pin e premi «Segna pin». In alternativa disegnali sulla mappa. Servono per l'estremo favorito e per distanza e tempo nel timer.",
+      {titolo: "Linea di partenza", testo: "Passa vicino a comitato e pin e segnali, oppure disegnali.",
         fatto: !!lp, stato: lp ? "Linea segnata" + (cdr && p ? " col GPS." : " (in parte virtuale o stimata).") : "Linea non segnata.",
         azioni: [["segna:CdR", cdr ? "Aggiorna comitato" : "Segna comitato"], ["segna:P", p ? "Aggiorna pin" : "Segna pin"], ["disegna", "Disegna sulla mappa"]]},
-      ...(b ? [{titolo: "Boa " + b.codice + " · " + b.nome, testo: "Se ci passi vicino, segna la sua posizione col GPS. Altrimenti rilevala: guardala e indica di quanti gradi si trova rispetto alla prua; due rilevamenti da punti diversi danno la posizione.",
+      ...(b ? [{titolo: "Boa " + b.codice + " · " + b.nome, testo: "Vicino: Segna GPS. Lontano: Rileva, due volte da punti diversi.",
         fatto: !!b.pos, stato: b.pos ? statoBoa(b).testo : "Posizione ignota.", azioni: [["segna:" + b.codice, b.pos?.fonte === "gps" ? "Aggiorna GPS" : "Segna GPS"], ["rileva:" + b.codice, "Rileva"]]}] : []),
-      passoVento("In regata serve per i salti di vento (buoni e scarsi), le lay-line e il lato favorito della linea. Falla poco prima della partenza."),
-      passoTimer("Al segnale dei 5 minuti premi «Avvia −5:00»; a ogni segnale successivo premi «Sincronizza».")];
+      passoVento("Serve per salti, lay-line e linea. Falla poco prima della partenza."),
+      passoTimer("Avvia al segnale dei 5 minuti, poi Sincronizza a ogni segnale.")];
   }
   if (m === "polari") {
     const t = tar(), lim = pol.imp.validitaMin * 60000, adesso = Date.now();
     const dirOk = t.dir !== null && t.fonte !== "andatura" && (!t.t || adesso - t.t <= lim), twsOk = pol.vento && adesso - pol.vento.t <= lim;
     return [passoGps(), passoSchermo(),
-      {...passoVento("Le polari misurano la velocità a ogni angolo dal vento, quindi la direzione deve essere precisa. Ritarala almeno ogni " + pol.imp.validitaMin + " minuti.", false), fatto: dirOk},
-      {titolo: "Intensità del vento", testo: "A barca ferma leggi l'anemometro di coperta e inserisci il valore. Aggiornalo quando il vento cambia.",
+      {...passoVento("Ritarala almeno ogni " + pol.imp.validitaMin + " minuti.", false), fatto: dirOk},
+      {titolo: "Intensità del vento", testo: "A barca ferma, dall'anemometro di coperta.",
         fatto: !!twsOk, stato: pol.vento ? numero(pol.vento.tws, 1) + " nodi, " + etaTesto(adesso - pol.vento.t) + (twsOk ? "." : ": da aggiornare.") : "Non inserita.",
         azioni: [["vai:vista-polari:pol-tws", "Inserisci il vento", !twsOk]]},
-      {titolo: "Vele a riva", testo: "Indica le vele issate: le polari vengono tenute separate per ogni combinazione di vele.", fatto: true, stato: nomeVele(chiaveVele(pol.vele)) + ".",
+      {titolo: "Vele a riva", testo: "Le polari si separano per vele.", fatto: true, stato: nomeVele(chiaveVele(pol.vele)) + ".",
         azioni: [["vai:vista-polari:pol-prua", "Cambia vele"]]},
-      {titolo: "Registrazione", testo: "Naviga un angolo alla volta, almeno un minuto per mura, su tutte e due le mure. L'app registra solo quando rotta e velocità sono stabili.",
+      {titolo: "Registrazione", testo: "Un angolo alla volta, un minuto per mura, su entrambe le mure.",
         fatto: st.polRegistra, stato: st.polRegistra ? "Registrazione attiva." : "Registrazione ferma.", azioni: [["registra", st.polRegistra ? "Stop registrazione" : "Avvia la registrazione", !st.polRegistra]]}];
   }
   return [];
 }
 const INTRO = {
-  navigazione: "Strumentazione di bordo: rotta, velocità, vento medio e andatura. Basta il GPS; per vento e andatura serve anche la taratura a motore.",
-  allenamento: "Esercizi e prove di partenza. Prepara solo quello che ti serve: i passi facoltativi si possono saltare.",
-  regata: "Strumentazione per la regata: percorso, linea di partenza, boa di bolina, vento e timer. Segui i passi nell'ordine, una volta arrivato sul campo di regata.",
-  polari: "Misura delle velocità della barca. Servono la direzione e l'intensità del vento aggiornate e le vele a riva indicate."
+  navigazione: "Basta il GPS; per vento e andatura serve la taratura o l'andatura dichiarata.",
+  allenamento: "Prepara solo quello che serve: i passi facoltativi si saltano.",
+  regata: "Segui i passi nell'ordine, sul campo di regata.",
+  polari: "Servono vento aggiornato e vele a riva."
 };
 function disegnaGuida() {
   if (!st.modo) return;
@@ -758,27 +758,23 @@ function azioneGuida(cmd) {
 // ---------------- Spiegazione delle modalità (v0.8) ----------------
 const SPIEGAZIONE = {
   navigazione: {sintesi: "Strumentazione di bordo: rotta, velocità, vento medio e andatura.", lista: [
-    "Rotta e velocità sul fondo, dal GPS del telefono.",
-    "Vento: si tara con la prua al vento a motore, oppure dichiarando l'andatura (traverso, lasco…) con il pulsante «Andatura».",
-    "Andatura e mure, calcolate da rotta e vento. Se il vento gira, dichiari la nuova andatura e il vento si aggiorna.",
-    "Ogni 3 minuti l'app ti chiede di confermare l'andatura (si può cambiare nelle impostazioni).",
-    "Mappa con la barca, timer di partenza e cronometro."]},
+    "Rotta e velocità dal GPS.",
+    "Vento: prua al vento a motore, oppure dichiara l'andatura.",
+    "Se il vento gira, dichiara la nuova andatura.",
+    "Timer e cronometro."]},
   allenamento: {sintesi: "Esercizi con boe, prove di partenza con timer e cronometro.", lista: [
-    "Boe: campi pronti costruiti intorno alla barca (solo partenza, partenza e bolina, bastone, due boe) oppure disegnati sulla mappa con il dito: barca comitato, pin e boe.",
-    "Timer di partenza da −5 minuti con i segnali sonori; con la linea segnata ti dice metri, secondi e anticipo o ritardo.",
-    "Cronometro con tempi parziali, metri percorsi e velocità media.",
-    "Vento e andatura come in navigazione; verso la boa: distanza, rilevamento e VMC."]},
+    "Boe: campi pronti o disegnati sulla mappa (comitato, pin, boe).",
+    "Timer di partenza con distanza e tempo dalla linea.",
+    "Cronometro con tempi parziali."]},
   regata: {sintesi: "Strumentazione per la regata: campo, linea di partenza, salti di vento, buoni e scarsi.", lista: [
-    "Campo: il percorso delle istruzioni di regata (Loano, Alassio) oppure disegnato sulla mappa.",
-    "Linea di partenza: si segnano barca comitato e pin; l'app indica l'estremo favorito e, con il timer, distanza e tempo dalla linea.",
-    "Salti di vento: in bolina stretta l'app indica buono e scarso e suona quando lo scarso dura.",
-    "Mure favorite verso la boa, lay-line e momento della virata.",
-    "Boa passata, arrivo e registro della regata."]},
+    "Percorso dalle istruzioni (Loano, Alassio) o disegnato.",
+    "Linea: estremo favorito, distanza e tempo con il timer.",
+    "Bolina stretta: buono, scarso e allarme.",
+    "Mure favorite, lay-line, arrivo."]},
   polari: {sintesi: "Misura delle velocità della barca a ogni angolo dal vento.", lista: [
-    "La direzione del vento si tara con la prua al vento a motore; l'intensità si legge a barca ferma sull'anemometro di coperta.",
-    "Indichi le vele a riva: vela di prua, randa e vele colorate.",
-    "L'app registra un punto ogni 2 secondi quando rotta e velocità sono stabili.",
-    "Ne ricava la polare della barca, gli angoli migliori di bolina e di poppa e, durante la navigazione, a quanti per cento della polare stai andando."]}
+    "Vento: prua al vento a motore; intensità a barca ferma.",
+    "Vele a riva.",
+    "Polare, angoli migliori e % della polare."]}
 };
 function mostraIntro(m) {
   st.modoProposto = m;
@@ -841,6 +837,73 @@ function controllaRichiesta(adesso) {
   $("richiesta-giusta").hidden = !a;
   $("richiesta-cambia").textContent = a ? "Cambia" : "Dichiara";
 }
+
+// ---------------- Reset (v0.9) ----------------
+// Prima di ogni reset si tiene una copia, per «Annulla l'ultimo reset».
+const CHIAVE_COPIA = "rr-regatta-prima-del-reset";
+function copiaPrimaDelReset() {
+  try { memoria.setItem(CHIAVE_COPIA, JSON.stringify({t: Date.now(), sessione: s, ventoPolari: pol.vento})); } catch {}
+}
+function leggiCopia() { try { const c = JSON.parse(memoria.getItem(CHIAVE_COPIA) || "null"); return c?.sessione ? c : null; } catch { return null; } }
+function annullaReset() {
+  const c = leggiCopia(); if (!c) return;
+  if (!confirm("Tornare a com'era prima del reset delle " + ora(c.t) + "?")) return;
+  try { s = verifica(c.sessione); } catch (err) { avvisa("Copia non valida: " + err.message + "."); return; }
+  pol.vento = c.ventoPolari ?? pol.vento; salvaPolari(true);
+  memoria.removeItem(CHIAVE_COPIA); azzeraStato();
+  evento("Annullato il reset delle " + ora(c.t)); avvisa("Reset annullato."); modificato();
+}
+function azzeraStato() {
+  st.allScarso = null; st.mura = null; st.poggiataDa = null; st.ultimaVirata = 0; st.stima = null; st.bs = null;
+  st.cronoAperto = false; st.andaturaAperta = false; st.ultimaRichiesta = Date.now(); st.ultimoTick = Date.now();
+  if (st.disegno) { st.disegno = null; st.selezionata = null; disegnaBarra(); }
+}
+const COSA_RESET = {
+  navigazione: "Si cancellano vento, andatura, timer e cronometro.",
+  allenamento: "Si cancellano vento, andatura, boe d'allenamento, timer e cronometro.",
+  regata: "Si cancellano vento, boe segnate o rilevate, arrivo, timer e cronometro. Restano il percorso e le posizioni delle istruzioni.",
+  polari: "Si cancellano vento e intensità inseriti e si ferma la registrazione. I punti delle polari restano."
+};
+function resetModo(m) {
+  if (!confirm("Reset di " + NOMI_MODO[m] + "?\n\n" + COSA_RESET[m])) return;
+  copiaPrimaDelReset();
+  s.vento = nuovoVento(s.vento.imp);
+  s.timer = nuovoTimer(s.timer.ultimi10); s.cronometro = nuovoCrono();
+  if (m === "allenamento" || m === "regata") {
+    if (s.campo.modello === "allenamento") { s.boe = []; s.campo = {...s.campo, sequenza: ""}; }
+    else s.boe = s.boe.map(b => ({...b, pos: b.pos?.fonte === "istruzioni" ? b.pos : null, storico: [], osservazioni: []}));
+    s.tappa = 0; s.arrivo = {...s.arrivo, estremi: {a: null, b: null}, taglio: null};
+  }
+  if (m === "polari") { st.polRegistra = false; st.polValuta = null; pol.vento = null; salvaPolari(true); }
+  azzeraStato();
+  evento("Reset " + NOMI_MODO[m]); avvisa("Reset fatto."); modificato();
+}
+
+// ---------------- Schermo intero e solo verticale (v0.9) ----------------
+const puoIntero = () => !!document.documentElement.requestFullscreen;
+async function schermoIntero(attiva) {
+  try {
+    if (attiva && !document.fullscreenElement) await document.documentElement.requestFullscreen({navigationUI: "hide"});
+    if (!attiva && document.fullscreenElement) await document.exitFullscreen();
+  } catch {}
+  try { if (document.fullscreenElement) await screen.orientation?.lock?.("portrait"); } catch {}
+  disegnaIntero();
+}
+function disegnaIntero() {
+  const dentro = !!document.fullscreenElement;
+  $("btn-intero").hidden = !puoIntero() || dentro;
+  const b = $("imp-intero");
+  b.setAttribute("aria-pressed", String(!!s.preferenze.schermoIntero));
+  b.textContent = "Schermo intero: " + (s.preferenze.schermoIntero ? "sì" : "no");
+}
+document.addEventListener("fullscreenchange", disegnaIntero);
+
+// Un solo riquadro sulla mappa alla volta: premendo un altro pulsante, timer e andatura si chiudono da soli.
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (st.andaturaAperta && !b.closest("#pannello-andatura") && b.id !== "btn-andatura") { st.andaturaAperta = false; disegnaAndatura(); }
+  if (st.cronoAperto && !b.closest("#crono") && b.id !== "btn-crono" && b.id !== "crono-pillola") { st.cronoAperto = false; disegnaCrono(); }
+}, true);
 
 // ---------------- Azioni di regata ----------------
 const puntoGps = () => ({lat: st.fix.lat, lon: st.fix.lon, acc: Number.isFinite(st.fix.accuracy) ? Math.round(st.fix.accuracy) : null, t: Date.now(), fonte: "gps"});
@@ -1156,8 +1219,8 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
     }
   }
   if (Number.isFinite(vento.W)) {
-    out += '<g transform="translate(' + (W - 92) + ' 34) rotate(' + f1(vento.W) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
-    out += '<text x="' + (W - 92) + '" y="68" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">VENTO ' + angolo(vento.W) + "</text>";
+    out += '<g transform="translate(' + (W - 112) + ' 34) rotate(' + f1(vento.W) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
+    out += '<text x="' + (W - 112) + '" y="68" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">VENTO ' + angolo(vento.W) + "</text>";
   }
 
   const etichette = [];
@@ -1388,6 +1451,9 @@ function disegnaAltro() {
   t.setAttribute("aria-pressed", String(st.mostraTraccia));
   t.textContent = "Traccia sulla mappa: " + (st.mostraTraccia ? "sì" : "no");
   $("imp-promemoria").value = String(s.vento.imp.promemoriaMin ?? 3);
+  const copia = leggiCopia(); $("btn-annulla-reset").hidden = !copia;
+  if (copia) $("btn-annulla-reset").textContent = "Annulla l'ultimo reset (" + ora(copia.t) + ")";
+  disegnaIntero();
   $("registro").innerHTML = s.eventi.slice(0, 40).map(e => "<li><b>" + ora(e.t) + "</b> " + esc(e.testo) + "</li>").join("") || "<li>Nessun evento.</li>";
 }
 
@@ -1497,15 +1563,20 @@ $("file-importa").addEventListener("change", async e => {
   } catch (err) { avvisa("File non valido: " + err.message + "."); }
 });
 $("btn-nuova").addEventListener("click", () => {
-  if (!confirm("Iniziare una nuova sessione? Restano il campo e le posizioni indicate dalle istruzioni; si cancellano boe rilevate, arrivo, traccia e registro. Esporta prima se vuoi conservarli.")) return;
-  const campo = s.campo, boe = s.boe, barcaDati = s.barca, impVento = s.vento.imp;
+  if (!confirm("Reset generale?\n\nSi cancellano vento, boe segnate, arrivo, timer, traccia e registro. Restano percorso, dati della barca e polari.")) return;
+  copiaPrimaDelReset();
+  const campo = s.campo, boe = s.boe, barcaDati = s.barca, impVento = s.vento.imp, dieci = s.timer.ultimi10, pref = s.preferenze;
   s = nuovaSessione(campo.modello);
-  const dieci = s.timer.ultimi10;
-  s.barca = barcaDati; s.vento = nuovoVento(impVento); st.allScarso = null; s.timer = nuovoTimer(dieci);
+  s.barca = barcaDati; s.vento = nuovoVento(impVento); s.timer = nuovoTimer(dieci); s.preferenze = pref;
+  azzeraStato();
   s.campo = {...campo};
   s.boe = boe.map(b => ({...b, pos: b.pos?.fonte === "istruzioni" ? b.pos : null, storico: [], osservazioni: []}));
-  evento("Nuova sessione · " + campo.nome); avvisa("Nuova sessione iniziata."); modificato();
+  evento("Reset generale · " + campo.nome); avvisa("Reset fatto."); modificato();
 });
+$("btn-annulla-reset").addEventListener("click", annullaReset);
+$("guida-reset").addEventListener("click", () => { if (st.modo) resetModo(st.modo); });
+$("btn-intero").addEventListener("click", () => schermoIntero(true));
+$("imp-intero").addEventListener("click", () => { s.preferenze.schermoIntero = !s.preferenze.schermoIntero; schermoIntero(s.preferenze.schermoIntero); salvaPresto(); });
 
 new ResizeObserver(aggiorna).observe(carta);
 // Collegamenti della Fase 3
@@ -1626,7 +1697,7 @@ setInterval(tickTimer, 200);
 setInterval(aggiorna, 1000);
 setInterval(() => { if (st.vista === "vista-regata") disegnaVento(); }, 2000);
 setInterval(() => { if (st.vista === "vista-polari") disegnaPolariVivo(); }, 15000); // età di taratura e vento
-mostraVista("vista-home");
+mostraVista("vista-home"); disegnaIntero();
 // Il GPS si accende da solo all'apertura, salvo se l'utente ha negato il permesso.
 (async () => {
   try { const p = await navigator.permissions?.query({name: "geolocation"}); if (p?.state === "denied") { st.fase = "errore"; st.problema = "Permesso della posizione negato: abilitalo nelle impostazioni del sito in Chrome."; aggiorna(); return; } } catch {}
