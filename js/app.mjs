@@ -1,15 +1,15 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.5";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.5";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.5";
-import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.5";
-import {nuovaSessione, nuovoVento, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.5";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.5.1";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.5.1";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.5.1";
+import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.5.1";
+import {nuovaSessione, nuovoVento, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.5.1";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.5";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.5.1";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.5";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.5.1";
 
-const VERSIONE = "0.5";
+const VERSIONE = "0.5.1";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -398,7 +398,7 @@ function segnaBoa(codice) {
 }
 function apriRilievo(codice) {
   st.rilievo.codice = codice;
-  mostraVista("vista-campo");
+  mostraVista("vista-regata");
   $("blocco-rilievo").hidden = false;
   $("ril-codice").textContent = codice;
   disegnaRilievo();
@@ -614,7 +614,7 @@ function disegnaNav() {
     $("lon").textContent = coordinata(st.fix.lon, false);
     $("precisione").textContent = (dato === "vivo" ? "" : "ultima posizione · ") + "±" + Math.round(st.fix.accuracy ?? 0) + " m";
   }
-  if (st.vista === "vista-campo" && !$("blocco-rilievo").hidden) disegnaAnteprimaRilievo(nav);
+  if (st.vista === "vista-regata" && !$("blocco-rilievo").hidden) disegnaAnteprimaRilievo(nav);
   if (st.vista === "vista-nav") disegnaCarta(nav, attivo && dato === "vivo", ob, {W, off, rlv});
 }
 
@@ -749,7 +749,7 @@ carta.addEventListener("pointercancel", rilascia);
 carta.addEventListener("wheel", e => { e.preventDefault(); const p = puntoSvg(e); zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, p.x, p.y); }, {passive: false});
 
 // ---------------- Disegno: liste (solo quando cambiano i dati o la scheda) ----------------
-function disegnaViste() { if (st.vista === "vista-campo") disegnaCampo(); if (st.vista === "vista-altro") disegnaAltro(); if (st.vista === "vista-vento") disegnaVento(); if (st.vista === "vista-polari") disegnaPolari(); }
+function disegnaViste() { if (st.vista === "vista-regata") { disegnaCampo(); disegnaVento(); } if (st.vista === "vista-altro") disegnaAltro(); if (st.vista === "vista-polari") disegnaPolari(); }
 
 // ---------------- Scheda Vento ----------------
 function disegnaVento() {
@@ -775,7 +775,7 @@ function disegnaVento() {
     : "Riferimento " + angolo(t.dir) + " (" + metodo + "). Boline: dritta " + (v.rif.dritta ? angolo(v.rif.dritta.cog) : "—") + ", sinistra " + (v.rif.sinistra ? angolo(v.rif.sinistra.cog) : "—") +
       ". Angolo di virata " + Math.round(t.angoloVirata) + "° " + (t.misurato ? "misurato." : "predefinito (registra le due boline per misurarlo).");
   const lp = lineaPartenza(s.boe), lf = lp && Number.isFinite(sv.medio) ? latoFavorito(lp[0], lp[1], sv.medio) : null;
-  $("linea-stato").textContent = !lp ? "Segna con il GPS la barca CdR e la boa P nella scheda Campo."
+  $("linea-stato").textContent = !lp ? "Segna con il GPS la barca CdR e la boa P nella sezione Boe, qui sopra."
     : !lf ? "Tara il vento per sapere quale estremo è favorito."
     : lf.favorito === "neutra" ? "Linea neutra (sbilanciamento sotto i 2°). Lunga " + Math.round(lf.lunghezza) + " m."
     : "Favorita " + (lf.favorito === "P" ? "la boa P" : "la barca CdR") + ": " + Math.round(lf.sbilanciamento) + "° di sbilanciamento, " + Math.round(lf.vantaggio) + " m più sopravvento (" +
@@ -903,11 +903,17 @@ $("nuova-aggiungi").addEventListener("click", () => {
 // ---------------- Collegamenti dei pulsanti ----------------
 function mostraVista(id) {
   st.vista = id;
-  for (const v of ["vista-nav", "vista-vento", "vista-campo", "vista-polari", "vista-altro"]) $(v).hidden = v !== id;
+  for (const v of ["vista-nav", "vista-regata", "vista-polari", "vista-altro"]) $(v).hidden = v !== id;
   document.querySelectorAll(".schede button").forEach(b => { if (b.dataset.vista === id) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   disegnaViste(); aggiorna();
 }
 document.querySelectorAll(".schede button").forEach(b => b.addEventListener("click", () => mostraVista(b.dataset.vista)));
+// Indice della scheda Regata: salta alla sezione (sotto la riga dell'indice, che resta in alto).
+document.querySelectorAll("[data-vai]").forEach(b => b.addEventListener("click", () => {
+  const sez = $(b.dataset.vai), cont = $("vista-regata"), alto = cont.querySelector(".indice").offsetHeight;
+  if (sez.tagName === "DETAILS") sez.open = true;
+  cont.scrollTo({top: sez.offsetTop - cont.offsetTop - alto - 8, behavior: "smooth"});
+}));
 $("btn-gps").addEventListener("click", avviaGps);
 $("btn-passata").addEventListener("click", boaPassata);
 $("btn-traguardo").addEventListener("click", tagliaTraguardo);
@@ -975,7 +981,7 @@ new ResizeObserver(aggiorna).observe(carta);
 $("btn-bolina").addEventListener("click", () => {
   s.vento.bolina = !s.vento.bolina;
   evento(s.vento.bolina ? "Bolina stretta confermata" : "Bolina stretta terminata");
-  if (s.vento.bolina && !tar().off) avvisa("Bolina confermata, ma il vento non è tarato: vai nella scheda Vento.");
+  if (s.vento.bolina && !tar().off) avvisa("Bolina confermata, ma il vento non è tarato: vai in Regata → Taratura.");
   salvaPresto(); aggiorna();
 });
 $("allarme-ok").addEventListener("click", () => {
@@ -1055,6 +1061,6 @@ $("pol-azzera").addEventListener("click", () => {
 });
 
 setInterval(aggiorna, 1000);
-setInterval(() => { if (st.vista === "vista-vento") disegnaVento(); }, 2000);
+setInterval(() => { if (st.vista === "vista-regata") disegnaVento(); }, 2000);
 setInterval(() => { if (st.vista === "vista-polari") disegnaPolariVivo(); }, 15000); // età di taratura e vento
 mostraVista("vista-nav");

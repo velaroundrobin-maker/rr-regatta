@@ -1,6 +1,6 @@
 // Convert browser geolocation reports into a validated boat position.
 // A position is useful even when the device cannot yet provide speed or heading.
-import {bearing,distanceMeters,norm} from "./engine.mjs?v=0.5";
+import {bearing,distanceMeters,norm} from "./engine.mjs?v=0.5.1";
 
 const KNOTS_PER_MPS = 1.9438444924406;
 

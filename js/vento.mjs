@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.5";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.5.1";
 
 export const MURE = ["dritta", "sinistra"];
 

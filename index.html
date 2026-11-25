@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.5">
+<link rel="stylesheet" href="./app.css?v=0.5.1">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.5</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.5.1</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
@@ -79,28 +79,56 @@
     </section>
   </main>
 
-  <!-- VENTO -->
-  <main class="vista scorre" id="vista-vento" hidden>
-    <section class="blocco">
-      <h2>VENTO STIMATO</h2>
-      <div class="vento-griglia">
-        <div><span>Medio</span><b id="v-medio">—</b><small id="v-medio-nota">—</small></div>
-        <div><span>Adesso (20 s)</span><b id="v-ora">—</b><small>&nbsp;</small></div>
-        <div><span>Salto</span><b id="v-salto">—</b><small id="v-salto-nota">&nbsp;</small></div>
+    <!-- REGATA: campo, boe, taratura, partenza, vento, arrivo, impostazioni -->
+  <main class="vista scorre" id="vista-regata" hidden>
+    <nav class="indice" aria-label="Sezioni della regata">
+      <button type="button" data-vai="sez-percorso">Percorso</button>
+      <button type="button" data-vai="sez-boe">Boe</button>
+      <button type="button" data-vai="sez-taratura">Taratura</button>
+      <button type="button" data-vai="sez-linea">Partenza</button>
+      <button type="button" data-vai="sez-vento">Vento</button>
+      <button type="button" data-vai="sez-arrivo">Arrivo</button>
+      <button type="button" data-vai="sez-impostazioni">Allarmi</button>
+    </nav>
+    <section class="blocco" id="blocco-rilievo" hidden>
+      <h2>RILEVAMENTO · BOA <span id="ril-codice">—</span></h2>
+      <p class="aiuto">Guarda la boa e stima di quanti gradi si trova a sinistra o a dritta della prua. La rotta GPS sostituisce la prua: con corrente o scarroccio c'è un piccolo errore.</p>
+      <div class="segmento" role="group" aria-label="Lato">
+        <button type="button" data-lato="-1" aria-pressed="true">A sinistra</button>
+        <button type="button" data-lato="1" aria-pressed="false">A dritta</button>
       </div>
-      <p class="aiuto" id="v-stato">—</p>
+      <div class="gradi" id="ril-gradi"></div>
+      <label class="campo-num">Gradi <input id="ril-angolo" type="number" inputmode="numeric" min="0" max="180" value="20"></label>
+      <p class="anteprima" id="ril-anteprima">—</p>
+      <div class="riga-pulsanti"><button type="button" class="principale" id="ril-registra">Registra rilevamento</button><button type="button" class="secondario" id="ril-chiudi">Chiudi</button></div>
     </section>
-
-    <section class="blocco">
-      <h2>TIPO DI VENTO</h2>
-      <strong class="tipo-vento" id="v-tipo">—</strong>
-      <p class="aiuto" id="v-tipo-testo">—</p>
-      <div class="fig-vento"><svg id="grafico-vento" role="img" aria-label="Andamento del vento stimato negli ultimi 30 minuti"></svg></div>
-      <p class="aiuto">Andamento degli ultimi 30 minuti rispetto al vento medio: in alto il vento girato a destra, in basso a sinistra.</p>
+    <section class="blocco" id="sez-percorso">
+      <h2>PERCORSO</h2>
+      <p class="aiuto" id="campo-titolo">—</p>
+      <ol class="tappe" id="lista-tappe"></ol>
+      <p class="aiuto">Tocca una tappa per farla diventare la prossima.</p>
     </section>
-
     <section class="blocco">
-      <h2>TARATURA</h2>
+      <details class="configura" id="configura">
+        <summary>Cambia campo di regata</summary>
+        <label>Nome della regata <input id="cfg-nome" maxlength="80"></label>
+        <label>Modello <select id="cfg-modello"></select></label>
+        <label>Sequenza <input id="cfg-sequenza" autocapitalize="characters"></label>
+        <p class="aiuto" id="cfg-note">—</p>
+        <button type="button" class="principale largo" id="cfg-applica">Applica</button>
+      </details>
+    </section>
+    <section class="blocco" id="sez-boe">
+      <h2>BOE</h2>
+      <div class="boe" id="lista-boe"></div>
+      <details class="aggiungi">
+        <summary>Aggiungi una boa</summary>
+        <div class="riga-campi"><label>Codice <input id="nuova-codice" maxlength="6"></label><label>Nome <input id="nuova-nome" maxlength="40"></label></div>
+        <button type="button" class="secondario" id="nuova-aggiungi">Aggiungi</button>
+      </details>
+    </section>
+    <section class="blocco" id="sez-taratura">
+      <h2>TARATURA DEL VENTO</h2>
       <p class="tar-stato" id="tar-stato">—</p>
       <button type="button" class="principale largo" id="tar-motore">Memorizza vento a motore</button>
       <p class="aiuto">A motore, prua esattamente al vento, rotta costante per una decina di secondi, poi premi.</p>
@@ -115,13 +143,34 @@
       </div>
       <button type="button" class="collegamento-testo" id="tar-azzera">Azzera la taratura</button>
     </section>
-
-    <section class="blocco">
+    <section class="blocco" id="sez-linea">
       <h2>LINEA DI PARTENZA</h2>
       <p class="linea-stato" id="linea-stato">—</p>
     </section>
-
+    <section class="blocco" id="sez-vento">
+      <h2>VENTO IN REGATA</h2>
+      <div class="vento-griglia">
+        <div><span>Medio</span><b id="v-medio">—</b><small id="v-medio-nota">—</small></div>
+        <div><span>Adesso (20 s)</span><b id="v-ora">—</b><small>&nbsp;</small></div>
+        <div><span>Salto</span><b id="v-salto">—</b><small id="v-salto-nota">&nbsp;</small></div>
+      </div>
+      <p class="aiuto" id="v-stato">—</p>
+    </section>
     <section class="blocco">
+      <h2>TIPO DI VENTO</h2>
+      <strong class="tipo-vento" id="v-tipo">—</strong>
+      <p class="aiuto" id="v-tipo-testo">—</p>
+      <div class="fig-vento"><svg id="grafico-vento" role="img" aria-label="Andamento del vento stimato negli ultimi 30 minuti"></svg></div>
+      <p class="aiuto">Andamento degli ultimi 30 minuti rispetto al vento medio: in alto il vento girato a destra, in basso a sinistra.</p>
+    </section>
+    <section class="blocco" id="sez-arrivo">
+      <h2>ARRIVO</h2>
+      <div id="arrivo-estremi"></div>
+      <button type="button" class="principale largo" id="btn-traguardo-2">Taglia il traguardo</button>
+      <p class="aiuto" id="arrivo-esito">—</p>
+      <button type="button" class="collegamento-testo" id="annulla-arrivo" hidden>Annulla l'arrivo registrato</button>
+    </section>
+    <section class="blocco" id="sez-impostazioni">
       <h2>ALLARME E DATI DELLA BARCA</h2>
       <div class="impostazioni">
         <label>Allarme scarso oltre <select id="imp-soglia"><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option><option>12</option><option>15</option></select> gradi</label>
@@ -135,57 +184,7 @@
     </section>
   </main>
 
-  <!-- CAMPO -->
-  <main class="vista scorre" id="vista-campo" hidden>
-    <section class="blocco" id="blocco-rilievo" hidden>
-      <h2>RILEVAMENTO · BOA <span id="ril-codice">—</span></h2>
-      <p class="aiuto">Guarda la boa e stima di quanti gradi si trova a sinistra o a dritta della prua. La rotta GPS sostituisce la prua: con corrente o scarroccio c'è un piccolo errore.</p>
-      <div class="segmento" role="group" aria-label="Lato">
-        <button type="button" data-lato="-1" aria-pressed="true">A sinistra</button>
-        <button type="button" data-lato="1" aria-pressed="false">A dritta</button>
-      </div>
-      <div class="gradi" id="ril-gradi"></div>
-      <label class="campo-num">Gradi <input id="ril-angolo" type="number" inputmode="numeric" min="0" max="180" value="20"></label>
-      <p class="anteprima" id="ril-anteprima">—</p>
-      <div class="riga-pulsanti"><button type="button" class="principale" id="ril-registra">Registra rilevamento</button><button type="button" class="secondario" id="ril-chiudi">Chiudi</button></div>
-    </section>
-
-    <section class="blocco">
-      <h2>PERCORSO</h2>
-      <p class="aiuto" id="campo-titolo">—</p>
-      <ol class="tappe" id="lista-tappe"></ol>
-      <p class="aiuto">Tocca una tappa per farla diventare la prossima.</p>
-    </section>
-
-    <section class="blocco">
-      <h2>BOE</h2>
-      <div class="boe" id="lista-boe"></div>
-      <details class="aggiungi">
-        <summary>Aggiungi una boa</summary>
-        <div class="riga-campi"><label>Codice <input id="nuova-codice" maxlength="6"></label><label>Nome <input id="nuova-nome" maxlength="40"></label></div>
-        <button type="button" class="secondario" id="nuova-aggiungi">Aggiungi</button>
-      </details>
-    </section>
-
-    <section class="blocco">
-      <h2>ARRIVO</h2>
-      <div id="arrivo-estremi"></div>
-      <button type="button" class="principale largo" id="btn-traguardo-2">Taglia il traguardo</button>
-      <p class="aiuto" id="arrivo-esito">—</p>
-      <button type="button" class="collegamento-testo" id="annulla-arrivo" hidden>Annulla l'arrivo registrato</button>
-    </section>
-
-    <section class="blocco">
-      <details class="configura" id="configura">
-        <summary>Cambia campo di regata</summary>
-        <label>Nome della regata <input id="cfg-nome" maxlength="80"></label>
-        <label>Modello <select id="cfg-modello"></select></label>
-        <label>Sequenza <input id="cfg-sequenza" autocapitalize="characters"></label>
-        <p class="aiuto" id="cfg-note">—</p>
-        <button type="button" class="principale largo" id="cfg-applica">Applica</button>
-      </details>
-    </section>
-  </main>
+  
 
   <!-- POLARI -->
   <main class="vista scorre" id="vista-polari" hidden>
@@ -296,14 +295,13 @@
 
   <nav class="schede" aria-label="Sezioni">
     <button type="button" data-vista="vista-nav" aria-current="page">Navigazione</button>
-    <button type="button" data-vista="vista-vento">Vento</button>
-    <button type="button" data-vista="vista-campo">Campo</button>
+    <button type="button" data-vista="vista-regata">Regata</button>
     <button type="button" data-vista="vista-polari">Polari</button>
     <button type="button" data-vista="vista-altro">Altro</button>
   </nav>
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.5"></script>
+<script type="module" src="./js/app.mjs?v=0.5.1"></script>
 </body>
 </html>

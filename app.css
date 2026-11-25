@@ -120,7 +120,7 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .registro li{margin-bottom:5px}
 .registro b{color:#fff}
 
-.schede{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;border-top:1px solid var(--linea);background:var(--nero);padding-bottom:env(safe-area-inset-bottom)}
+.schede{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;border-top:1px solid var(--linea);background:var(--nero);padding-bottom:env(safe-area-inset-bottom)}
 .schede button{min-height:50px;border:0;background:none;font-size:14px;padding:0 2px;font-weight:800;color:var(--grigio);border-top:3px solid transparent}
 .schede button[aria-current="page"]{color:#fff;border-top-color:var(--rosso)}
 
@@ -182,7 +182,7 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 @media (max-height:500px) and (orientation:landscape){.valore{font-size:30px}.strumenti{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* ----- v0.5: polari ----- */
-.schede button{font-size:13px}
+.schede button{font-size:14px}
 .titolo small.registra{color:#fff}
 .titolo small.registra::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--rosso);margin-right:5px;vertical-align:1px;animation:pulsa 1.4s infinite}
 .interruttore.registra{font-size:17px;min-height:54px;margin-top:0}
@@ -210,3 +210,9 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .tabella-polare tr.ottimo td{background:#000}
 .tabella-polare tr.ottimo td:first-child{border-left:3px solid var(--rosso)}
 @media (min-width:900px) and (orientation:landscape){.fig-polare{height:420px}}
+
+/* ----- v0.5: scheda Regata con indice ----- */
+.indice{flex:none;position:sticky;top:-8px;z-index:3;display:flex;gap:6px;overflow-x:auto;margin:-8px -10px 0;padding:8px 10px;background:var(--fondo);border-bottom:1px solid var(--linea);scrollbar-width:none}
+.indice::-webkit-scrollbar{display:none}
+.indice button{flex:none;min-height:40px;padding:4px 12px;border-radius:20px;border:1px solid #666;background:#202020;font-size:14px;font-weight:800}
+@media (min-width:900px) and (orientation:landscape){.indice{margin:-8px 0 0;border-radius:0 0 12px 12px}}

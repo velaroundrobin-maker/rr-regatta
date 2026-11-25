@@ -6,6 +6,7 @@ Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
 ## Versione 0.5 — polari apprese in allenamento
 
+- Schede riordinate per momento d'uso: Navigazione (lo schermo da guardare navigando), Regata (percorso, boe, taratura, partenza, vento in regata, arrivo, allarmi, con indice in alto), Polari, Altro.
 - Nuova scheda Polari: registrazione delle velocità della barca per angolo dal vento, separate per intensità del vento e per vele a riva (J1, J2, J3, Genoa 1–3; randa piena, 1 o 2 mani; spinnaker, gennaker, Code 0).
 - Direzione del vento dalla taratura più recente (prua al vento a motore o coppia di boline); intensità inserita dall'equipaggio con l'anemometro (a barca ferma, oppure a motore prua al vento togliendo la velocità della barca).
 - Si registra solo con rotta e velocità stabili da 20 secondi, taratura e vento aggiornati (limite regolabile), un minuto dopo ogni cambio di vele.
