@@ -1,17 +1,17 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.9.1";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.9.1";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.9.1";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.9.2";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.9.2";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.9.2";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.9.1";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.9.1";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.9.1";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.9.2";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.9.2";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.9.2";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.9.1";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.9.2";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.9.1";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.9.2";
 
-const VERSIONE = "0.9.1";
+const VERSIONE = "0.9.2";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -458,7 +458,11 @@ function disegnaCrono(adesso = Date.now()) {
   const pill = $("crono-pillola");
   pill.hidden = st.cronoAperto || !(timerAttivo || cr.inizio !== null);
   if (!pill.hidden) { pill.textContent = timerAttivo ? testoTimer(z, adesso) : "⏱ " + testoCronometro(tempoCronometro(cr, adesso)); pill.className = "crono-pillola" + (timerAttivo && z <= adesso ? " partiti" : ""); }
-  $("btn-crono").classList.toggle("attivo", st.cronoAperto || timerAttivo || cr.inizio !== null);
+  // Il tempo che corre si legge nel pulsante Timer, senza riquadri sopra la mappa.
+  const bc = $("btn-crono"), corre = timerAttivo || cr.inizio !== null;
+  bc.textContent = timerAttivo ? testoTimer(z, adesso) : cr.inizio !== null ? testoCronometro(tempoCronometro(cr, adesso)).replace(/,\d$/, "") : "Timer";
+  bc.classList.toggle("in-corso", corre && !st.cronoAperto);
+  bc.classList.toggle("attivo", st.cronoAperto);
   if (!st.cronoAperto) return;
   document.querySelectorAll("[data-modo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.modo === st.cronoModo)));
   $("crono-timer").hidden = st.cronoModo !== "timer"; $("crono-cronometro").hidden = st.cronoModo !== "cronometro";
@@ -538,6 +542,7 @@ function avviaDisegno() {
 }
 function disegnaBarra() {
   $("disegno-barra").hidden = !st.disegno;
+  document.body.classList.toggle("disegnando", !!st.disegno); // mentre si disegna la mappa prende il posto degli strumenti
   if (!st.disegno) return;
   document.querySelectorAll("[data-metti]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.metti === st.disegno.metti)));
   const t = $("disegno-togli");
@@ -607,6 +612,8 @@ function selezionaBoa(codice) {
 }
 function fineDisegno() {
   st.disegno = null; st.selezionata = null; disegnaBarra();
+  // La mappa torna alla sua misura: inquadra barca e boe, così si vede subito il campo intero.
+  if ([st.fix, ...s.boe.map(b => b.pos)].some(p => p && Number.isFinite(p.lat))) inquadraTutto();
   evento("Campo disegnato: " + s.campo.sequenza); salvaPresto(); modificato();
   if (s.campo.modello !== "allenamento" && s.boe.some(b => b.pos?.fonte === "disegnata")) avvisa("Ricorda di controllare la sequenza in Regata → Cambia campo.");
 }
@@ -1249,10 +1256,6 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
       out += '<path d="M' + f1(p.x) + " " + f1(p.y) + "L" + f1(p.x + L * Math.sin(a)) + " " + f1(p.y - L * Math.cos(a)) + '" stroke="#bdbdbd" stroke-width="1.5" stroke-opacity=".7"/>';
     }
   }
-  if (Number.isFinite(vento.W)) {
-    out += '<g transform="translate(' + (W - 112) + ' 34) rotate(' + f1(vento.W) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
-    out += '<text x="' + (W - 112) + '" y="68" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">VENTO ' + angolo(vento.W) + "</text>";
-  }
 
   const etichette = [];
   for (const b of campo ? s.boe : []) {
@@ -1268,18 +1271,61 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
       out += '<circle cx="' + cx + '" cy="' + cy + '" r="12" fill="none" stroke="' + (corrente || scelta ? "#ff0000" : "#fff") + '" stroke-width="' + (corrente || scelta ? 3 : 2) + '"/>';
       out += '<circle cx="' + cx + '" cy="' + cy + '" r="5.5" fill="#ff0000"/>';
     }
-    etichette.push({x: p.x + 15, y: p.y - 15, testo: (b.codice === "P" ? "Pin" : b.codice) + (certo || virtuale ? "" : b.pos.fonte === "istruzioni" ? " (IdR)" : " ~")});
+    etichette.push({px: p.x, py: p.y, x: p.x + 15, y: p.y - 15, testo: (b.codice === "P" ? "Pin" : b.codice) + (certo || virtuale ? "" : b.pos.fonte === "istruzioni" ? " (IdR)" : " ~")});
   }
   if (ob && (ob.fonte === "linea" || ob.fonte === "estremo") && ob.pos) { const p = xy(ob.pos); out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="15" fill="none" stroke="#ff0000" stroke-width="3"/>'; }
   if (campo && s.arrivo.taglio?.lat != null) { const p = xy(s.arrivo.taglio); out += '<circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="7" fill="#fff"/><circle cx="' + f1(p.x) + '" cy="' + f1(p.y) + '" r="16" fill="none" stroke="#fff" stroke-width="2.5"/>'; }
-  // Sigle delle boe: se due si sovrappongono, la seconda si sposta sotto o a sinistra del suo punto.
-  const occupate = [];
+  const riservate = []; // spazi già occupati da bussola e vento: le sigle delle boe li evitano
+  // Bussola sui bordi: tacche ogni 10°, gradi ogni 30°, punti cardinali (nord in alto).
+  const bordo = gr => {
+    const dx = Math.sin(rad(gr)), dy = -Math.cos(rad(gr));
+    const t = Math.min(dx ? (dx > 0 ? W / 2 : -W / 2) / dx : Infinity, dy ? (dy > 0 ? H / 2 : -H / 2) / dy : Infinity);
+    return {x: W / 2 + dx * t, y: H / 2 + dy * t, dx, dy};
+  };
+  // Punti da non coprire con le scritte fisse: boe e barca.
+  const punti = etichette.map(e => ({x: e.px, y: e.py}));
+  if (st.fix) punti.push(xy(st.fix));
+  const vicino = (x, y, dx, dy) => punti.some(p => Math.abs(p.x - x) < dx && Math.abs(p.y - y) < dy);
+  for (let gr = 0; gr < 360; gr += 10) {
+    const b = bordo(gr), L = gr % 30 ? 6 : 12;
+    out += '<path d="M' + f1(b.x) + " " + f1(b.y) + "L" + f1(b.x - b.dx * L) + " " + f1(b.y - b.dy * L) + '" stroke="#fff" stroke-opacity=".7" stroke-width="' + (gr % 90 ? 1.5 : 3) + '"/>';
+    if (gr % 30) continue;
+    const cardinale = {0: "N", 90: "E", 180: "S", 270: "O"}[gr], q = 22, lx = b.x - b.dx * q, ly = b.y - b.dy * q + 4, lw = cardinale ? 12 : 24;
+    if (vicino(lx, ly - 5, lw / 2 + 14, 22)) continue; // una boa o la barca sotto la scritta: resta solo la tacca
+    riservate.push({x: lx - lw / 2 - 2, y: ly - 14, w: lw + 4, h: 18});
+    out += '<text x="' + f1(b.x - b.dx * q) + '" y="' + f1(b.y - b.dy * q + 4) + '" fill="' + (cardinale ? "#fff" : "#b5b5b5") + '" font-size="' + (cardinale ? 15 : 11) + '" font-weight="800" text-anchor="middle">' + (cardinale || String(gr).padStart(3, "0")) + "</text>";
+  }
+  // Freccia del vento sul bordo, dal lato da cui arriva, che punta dove va il vento.
+  if (Number.isFinite(vento.W)) {
+    // Sul bordo da cui arriva il vento, con la scritta accanto. Se lì c'è una boa o la barca (di solito la boa di bolina)
+    // la freccia si scosta un poco lungo il bordo; la scritta va dal lato libero.
+    const urta = (x, y, w, h) => riservate.some(r => x - w / 2 < r.x + r.w && x + w / 2 > r.x && y - h / 2 < r.y + r.h && y + h / 2 > r.y);
+    const fuori = (x, y, w, h) => x - w / 2 < 4 || x + w / 2 > W - 4 || y - h / 2 < 4 || y + h / 2 > H - 4;
+    let scelto = null;
+    for (const d of [0, 15, -15, 30, -30]) for (const lato of [1, -1]) {
+      const b = bordo(vento.W + d), ax = b.x - b.dx * 46, ay = b.y - b.dy * 46;
+      const tx = ax - b.dy * 62 * lato, ty = ay + b.dx * 62 * lato;
+      const voto = (vicino(ax, ay, 24, 30) ? 100 : 0) + (vicino(tx, ty, 50, 20) ? 10 : 0) + (urta(tx, ty, 80, 16) ? 3 : 0) + (fuori(tx, ty, 80, 16) ? 5 : 0) + Math.abs(d) / 100;
+      if (!scelto || voto < scelto.voto) scelto = {ax, ay, tx, ty, voto};
+    }
+    const {ax, ay, tx, ty} = scelto;
+    out += '<g transform="translate(' + f1(ax) + " " + f1(ay) + ") rotate(" + f1(vento.W) + ')"><path d="M0 -16 L0 14 M-7 6 L0 15 L7 6" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/></g>';
+    out += '<text x="' + f1(tx) + '" y="' + f1(ty + 4) + '" fill="#fff" font-size="12" font-weight="800" text-anchor="middle" paint-order="stroke" stroke="#101010" stroke-width="4">VENTO ' + angolo(vento.W) + "</text>";
+    riservate.push({x: tx - 42, y: ty - 10, w: 84, h: 20}, {x: ax - 14, y: ay - 18, w: 28, h: 36});
+  }
+  // Sigle delle boe: se si sovrappongono tra loro o alla bussola, si spostano intorno al loro punto.
+  // Anche le boe e la barca sono spazi da non coprire.
+  for (const e of etichette) riservate.push({x: e.px - 12, y: e.py - 12, w: 24, h: 24});
+  if (st.fix) { const b = xy(st.fix); riservate.push({x: b.x - 16, y: b.y - 22, w: 32, h: 40}); }
+  const occupate = [...riservate];
+  const sovrapposto = (a, r) => Math.max(0, Math.min(a.x + a.w, r.x + r.w) - Math.max(a.x, r.x) + 3) * Math.max(0, Math.min(a.y + a.h, r.y + r.h) - Math.max(a.y, r.y) + 3);
   for (const e of etichette) {
     const w = 10 + e.testo.length * 8;
-    const prove = [[0, 0], [0, 30], [-w - 26, 0], [-w - 26, 30], [0, -24]];
-    const libero = ([dx, dy]) => !occupate.some(r => e.x + dx < r.x + r.w + 3 && e.x + dx + w + 3 > r.x && e.y + dy - 15 < r.y + 24 && e.y + dy + 9 > r.y);
-    const [dx, dy] = prove.find(libero) || prove[0];
-    e.x += dx; e.y += dy; occupate.push({x: e.x, y: e.y - 15, w});
+    const prove = [[0, 0], [0, 30], [-w - 30, 0], [-w - 30, 30], [0, -26], [-w - 30, -26], [0, 56], [-w - 30, 56], [-w / 2 - 15, 46], [-w / 2 - 15, -42], [24, 15], [-w - 54, 15]];
+    const area = ([dx, dy]) => { const a = {x: e.x + dx, y: e.y + dy - 15, w, h: 21}; return occupate.reduce((t, r) => t + sovrapposto(a, r), 0) + (a.x < 4 || a.x + w > W - 4 || a.y < 4 || a.y + 21 > H - 4 ? 1e6 : 0); };
+    // La prima posizione libera; se nessuna lo è, quella che copre meno.
+    const [dx, dy] = prove.find(q => area(q) === 0) || prove.reduce((m, q) => area(q) < area(m) ? q : m);
+    e.x += dx; e.y += dy; occupate.push({x: e.x, y: e.y - 15, w, h: 21});
     out += '<rect x="' + f1(e.x) + '" y="' + f1(e.y - 15) + '" width="' + w + '" height="21" rx="5" fill="#000" fill-opacity=".85" stroke="#666"/>';
     out += '<text x="' + f1(e.x + w / 2) + '" y="' + f1(e.y) + '" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">' + esc(e.testo) + "</text>";
   }
@@ -1289,19 +1335,6 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
     if (Number.isFinite(st.fix.accuracy)) out += '<circle cx="' + f1(b.x) + '" cy="' + f1(b.y) + '" r="' + f1(Math.max(3, st.fix.accuracy / m)) + '" fill="#ff0000" fill-opacity=".10" stroke="#ff0000" stroke-opacity=".7" stroke-width="1.5"/>';
     if (vivo && nav.cog !== null) out += '<g transform="translate(' + f1(b.x) + " " + f1(b.y) + ") rotate(" + f1(nav.cog) + ')"><path d="M0 -20 L12 14 L0 7 L-12 14Z" fill="' + colore + '" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></g>';
     else out += '<circle cx="' + f1(b.x) + '" cy="' + f1(b.y) + '" r="10" fill="' + colore + '" stroke="#fff" stroke-width="3"/>';
-  }
-  // Bussola sui bordi: tacche ogni 10°, gradi ogni 30°, punti cardinali (nord in alto).
-  const bordo = gr => {
-    const dx = Math.sin(rad(gr)), dy = -Math.cos(rad(gr));
-    const t = Math.min(dx ? (dx > 0 ? W / 2 : -W / 2) / dx : Infinity, dy ? (dy > 0 ? H / 2 : -H / 2) / dy : Infinity);
-    return {x: W / 2 + dx * t, y: H / 2 + dy * t, dx, dy};
-  };
-  for (let gr = 0; gr < 360; gr += 10) {
-    const b = bordo(gr), L = gr % 30 ? 6 : 12;
-    out += '<path d="M' + f1(b.x) + " " + f1(b.y) + "L" + f1(b.x - b.dx * L) + " " + f1(b.y - b.dy * L) + '" stroke="#fff" stroke-opacity=".7" stroke-width="' + (gr % 90 ? 1.5 : 3) + '"/>';
-    if (gr % 30) continue;
-    const cardinale = {0: "N", 90: "E", 180: "S", 270: "O"}[gr], q = 22;
-    out += '<text x="' + f1(b.x - b.dx * q) + '" y="' + f1(b.y - b.dy * q + 4) + '" fill="' + (cardinale ? "#fff" : "#b5b5b5") + '" font-size="' + (cardinale ? 15 : 11) + '" font-weight="800" text-anchor="middle">' + (cardinale || String(gr).padStart(3, "0")) + "</text>";
   }
   const sx = 42, sy = H - 42; // sopra le tacche della bussola
   out += '<path d="M' + sx + " " + (sy - 6) + "v6h" + f1(sc.pixel) + 'v-6" fill="none" stroke="#fff" stroke-width="2"/><text x="' + f1(sx + sc.pixel / 2) + '" y="' + (sy - 10) + '" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">' + sc.etichetta + "</text>";
@@ -1326,7 +1359,7 @@ function inquadraTutto() {
   const larg = Math.max(...xs) - Math.min(...xs), alt = Math.max(...ys) - Math.min(...ys);
   st.segui = false;
   st.centro = {lat: (Math.max(...ys) + Math.min(...ys)) / 2 / R * 180 / Math.PI, lon: (Math.max(...xs) + Math.min(...xs)) / 2 / (R * k) * 180 / Math.PI};
-  st.mpp = Math.min(LIMITI_MPP[1], Math.max(1.2, larg / Math.max(60, W - 120), alt / Math.max(60, H - 90)));
+  st.mpp = Math.min(LIMITI_MPP[1], Math.max(1.2, larg / Math.max(60, W - 150), alt / Math.max(60, H - 140))); // margine per bussola e sigle
   aggiorna();
 }
 const carta = $("carta"), puntatori = new Map();

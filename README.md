@@ -4,6 +4,16 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.9.2
+
+- Mappa senza sovrapposizioni: colonna dei comandi a destra e posizione sotto la mappa, fuori dal disegno.
+- Freccia del vento sul bordo da cui arriva, con la scritta accanto; si scosta se lì c'è una boa.
+- Sigle delle boe che evitano bussola, scritte, boe e barca; i gradi della bussola sotto una boa si nascondono.
+- Tempo del timer sul pulsante Timer (bordato di rosso).
+- Mentre si disegna la mappa prende il posto degli strumenti; con «Fine» inquadra barca e boe.
+- Avvisi in alto, che non bloccano i tocchi.
+- Telefoni piccoli (360×640): comandi della mappa che si accorciano, intestazione su una riga, vele colorate leggibili.
+
 ## Versione 0.9.1
 
 - Reset nell'intestazione, in ogni schermata delle modalità.

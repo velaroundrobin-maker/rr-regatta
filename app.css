@@ -325,3 +325,38 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .btn-reset:not([hidden])~.stato-gps,.btn-intero:not([hidden])~.stato-gps{margin-left:0}
 .stato-gps{min-width:0;overflow:hidden}
 .stato-gps span{overflow:hidden;text-overflow:ellipsis}
+
+/* ----- v0.9.2: niente sovrapposizioni sulla mappa -----
+   Colonna dei comandi a destra e riga delle coordinate in basso, fuori dal disegno: la bussola sui bordi resta libera. */
+#carta{top:0;left:0;right:auto;bottom:auto;width:calc(100% - 66px);height:calc(100% - 26px)}
+.mappa-messaggio{inset:0 66px 26px 0;padding:16px}
+.comandi-mappa{right:4px}
+.riquadro-pos{top:auto;left:0;right:66px;bottom:0;height:26px;flex-direction:row;align-items:center;justify-content:center;gap:10px;border:0;border-top:1px solid var(--linea);border-radius:0;background:#000;padding:0 6px;font-size:13px;white-space:nowrap;overflow:hidden}
+.riquadro-pos small{font-size:12px}
+.crono,.pannello-andatura,.richiesta-andatura,.disegno-barra{right:72px}
+.pannello-andatura{bottom:32px}
+.richiesta-andatura{bottom:32px}
+.disegno-barra{bottom:32px}
+.crono-pillola{display:none!important}
+#btn-crono.in-corso{font-size:13px;font-variant-numeric:tabular-nums;border:3px solid var(--rosso);background:#000}
+/* Avvisi in alto, sopra gli strumenti: non coprono i pulsanti e non bloccano i tocchi. */
+.avviso{top:62px;bottom:auto;pointer-events:none}
+/* Mentre si disegna il campo la mappa prende il posto degli strumenti (solo in verticale). */
+@media (orientation:portrait){.disegnando .vista-nav>.strumenti,.disegnando .vista-nav>.prossima{display:none}}
+/* Mentre si disegna, gli avvisi non coprono la colonna dei comandi. */
+.disegnando .avviso{right:84px}
+/* Vele colorate: «Spinnaker» e «Gennaker» hanno più spazio di «Nessuna» e «Code 0». */
+#pol-portante{grid-template-columns:1fr 1.15fr 1.15fr .9fr}
+@media (max-width:370px){.scelte button{font-size:13px}}
+/* I comandi della mappa si accorciano quando la mappa è bassa (telefoni piccoli): restano tutti visibili. */
+.comandi-mappa{top:4px;bottom:4px;gap:5px}
+.comandi-mappa button{height:auto;flex:0 1 44px;min-height:30px}
+/* Telefoni stretti: l'intestazione resta su una riga. */
+@media (max-width:400px){
+  .testata{gap:7px;padding:7px 8px}
+  .titolo{flex:none;white-space:nowrap}
+  .titolo strong{font-size:17px}
+  .titolo small{font-size:11px}
+  .btn-reset{padding:0 8px;font-size:13px}
+  .stato-gps{padding:6px 8px;font-size:13px;gap:5px}
+}
