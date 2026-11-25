@@ -194,6 +194,7 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .riga-vento input{font-size:26px;font-weight:800;text-align:center;min-height:54px}
 .passo{min-height:54px;border-radius:10px;border:1px solid #777;background:#222;font-size:28px;font-weight:800}
 .scelte{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#pol-prua{grid-template-columns:1fr 1fr 1fr 1.7fr}
 .scelte.tre{grid-template-columns:repeat(3,minmax(0,1fr))}
 .scelte.classi{grid-template-columns:repeat(5,minmax(0,1fr))}
 .scelte button{min-height:46px;border-radius:9px;border:1px solid #555;background:#202020;font-weight:800;font-size:14px;padding:2px 3px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}

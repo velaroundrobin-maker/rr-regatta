@@ -2,10 +2,10 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.7";
+import {delta, circularMean} from "./engine.mjs?v=0.7.2";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
-export const PRUA = ["J1", "J2", "J3", "Genoa 1", "Genoa 2", "Genoa 3", "Nessuna"];
+export const PRUA = ["J1", "J2", "J3", "Tormentina"];
 export const RANDA = ["Piena", "1 mano", "2 mani"];
 export const PORTANTI = ["Nessuna", "Spinnaker", "Gennaker", "Code 0"];
 export const CLASSI_VENTO = [4, 6, 8, 10, 12, 14, 16, 20, 25];
@@ -24,6 +24,9 @@ export function verificaPolari(obj) {
   const n = nuovePolari();
   obj.letture ??= []; obj.barca ??= "";
   obj.vele = {...n.vele, ...(obj.vele || {})};
+  if (!PRUA.includes(obj.vele.prua)) obj.vele.prua = "J1";
+  if (!RANDA.includes(obj.vele.randa)) obj.vele.randa = "Piena";
+  if (!PORTANTI.includes(obj.vele.portante)) obj.vele.portante = "Nessuna";
   obj.imp = {...n.imp, ...(obj.imp || {})};
   obj.vento ??= null;
   obj.campioni = obj.campioni.filter(c => Array.isArray(c) && c.length >= 5 && c.every(Number.isFinite) && c[4] >= 0 && c[4] < obj.configurazioni.length);

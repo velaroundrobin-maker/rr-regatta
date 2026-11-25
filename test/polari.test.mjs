@@ -83,3 +83,9 @@ test("unione di due file di polari senza doppioni", () => {
   assert.equal(a.configurazioni[a.campioni[a.campioni.length - 1][4]], "J3|2 mani|Nessuna");
   assert.throws(() => verificaPolari({formato: "rr-regatta"}), /polari/);
 });
+import {PRUA} from "../js/polari.mjs";
+test("vele di prua e verifica delle vele salvate", () => {
+  assert.deepEqual(PRUA, ["J1", "J2", "J3", "Tormentina"]);
+  const p = verificaPolari({...nuovePolari(), vele: {prua: "Genoa 1", randa: "Piena", portante: "Gennaker"}});
+  assert.equal(p.vele.prua, "J1"); assert.equal(p.vele.portante, "Gennaker");
+});

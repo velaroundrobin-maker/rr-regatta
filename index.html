@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.7">
+<link rel="stylesheet" href="./app.css?v=0.7.2">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.7</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.7.2</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
@@ -229,7 +229,7 @@
         <button type="button" class="secondario" id="tar-dritta">Bolina mure a dritta</button>
         <button type="button" class="secondario" id="tar-sinistra">Bolina mure a sinistra</button>
       </div>
-      <p class="aiuto">In bolina stretta ben regolata, rotta costante, premi il pulsante della mura su cui sei. Fallo su entrambe le mure: così l'app misura il vostro angolo di virata reale.</p>
+      <p class="aiuto">Facoltativo, per ora: in bolina stretta ben regolata, rotta costante, premi il pulsante della mura su cui sei, poi sull'altra. L'app misura così il vostro angolo di virata reale, che serve alle lay-line.</p>
       <div class="riga-mano">
         <label>Vento a mano <input id="tar-mano" type="number" inputmode="numeric" min="0" max="359" placeholder="gradi"></label>
         <button type="button" class="secondario" id="tar-mano-ok">Imposta</button>
@@ -298,23 +298,15 @@
       <p class="tar-stato" id="pol-vento-stato">—</p>
       <p class="sotto-titolo">Direzione</p>
       <button type="button" class="secondario largo" id="pol-motore">Prua al vento a motore: memorizza</button>
-      <div class="riga-pulsanti">
-        <button type="button" class="secondario" id="pol-dritta">Bolina mure a dritta</button>
-        <button type="button" class="secondario" id="pol-sinistra">Bolina mure a sinistra</button>
-      </div>
-      <p class="aiuto">Vale l'ultima taratura completa: il vento a motore, oppure le due boline (una per mura) registrate a breve distanza. La registrazione si ferma quando la taratura è più vecchia del limite scelto qui sotto.</p>
-      <p class="sotto-titolo">Intensità (anemometro)</p>
+      <p class="aiuto">Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi. La registrazione si ferma quando la taratura è più vecchia del limite scelto in fondo alla pagina: ritarate per tempo.</p>
+      <p class="sotto-titolo">Intensità (anemometro di coperta, a barca ferma)</p>
       <div class="riga-vento">
         <button type="button" class="passo" data-passo="-1" aria-label="Un nodo in meno">−</button>
         <input id="pol-tws" type="number" inputmode="decimal" min="0" max="60" step="0.5" placeholder="nodi" aria-label="Vento letto in nodi">
         <button type="button" class="passo" data-passo="1" aria-label="Un nodo in più">+</button>
       </div>
-      <div class="segmento" role="group" aria-label="Come è stato letto il vento">
-        <button type="button" data-metodo="fermo" aria-pressed="true">Barca ferma</button>
-        <button type="button" data-metodo="motore" aria-pressed="false">A motore prua al vento</button>
-      </div>
       <button type="button" class="principale largo" id="pol-tws-ok">Inserisci il vento</button>
-      <p class="aiuto">L'anemometro a mano legge il vento apparente. A barca ferma è il vento vero; a motore con la prua al vento l'app toglie la velocità della barca. Non leggerlo mentre navigate a vela. Tenetelo sempre alla stessa altezza, il più in alto possibile e lontano dalle vele.</p>
+      <p class="aiuto">A barca ferma l'anemometro legge il vento vero; mentre navigate legge il vento apparente, quindi non usatelo a vela. Leggetelo sempre nello stesso punto, il più in alto possibile e lontano dalle vele.</p>
     </section>
 
     <section class="blocco">
@@ -324,7 +316,7 @@
       <div class="scelte" id="pol-prua"></div>
       <p class="sotto-titolo">Randa</p>
       <div class="scelte tre" id="pol-randa"></div>
-      <p class="sotto-titolo">Vela portante</p>
+      <p class="sotto-titolo">Vele colorate</p>
       <div class="scelte" id="pol-portante"></div>
       <p class="aiuto">Dopo un cambio di vele l'app aspetta un minuto prima di registrare, il tempo di regolarle.</p>
     </section>
@@ -391,6 +383,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.7"></script>
+<script type="module" src="./js/app.mjs?v=0.7.2"></script>
 </body>
 </html>
