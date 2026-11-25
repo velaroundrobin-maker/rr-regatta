@@ -280,3 +280,4 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 #vista-home .secondario{flex:none}
 .passo p{font-weight:500}
 @media (min-width:900px) and (orientation:landscape){.vista-nav .valore.andatura{font-size:34px}}
+.vista-nav[data-modo="navigazione"] .azioni .principale.attivo{flex:0 0 40%}

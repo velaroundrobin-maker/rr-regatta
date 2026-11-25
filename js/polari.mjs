@@ -2,7 +2,7 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.7.2";
+import {delta, circularMean} from "./engine.mjs?v=0.7.3";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
 export const PRUA = ["J1", "J2", "J3", "Tormentina"];
@@ -75,21 +75,21 @@ export function classeVento(tws) {
 // fixes: punti GPS recenti {received, cog, sog, accuracy}. Il punto vale solo se rotta e velocità sono stabili da 20 s.
 export function valutaPunto({fixes, adesso, rif, vento, validitaMs, ultimoCambioVele, minSog = 1}) {
   if (!rif || !Number.isFinite(rif.dir)) return {ok: false, motivo: "direzione del vento non tarata"};
-  if (Number.isFinite(rif.t) && adesso - rif.t > validitaMs) return {ok: false, motivo: "taratura del vento vecchia di " + Math.round((adesso - rif.t) / 60000) + " min: ritara"};
+  if (Number.isFinite(rif.t) && adesso - rif.t > validitaMs) return {ok: false, motivo: "la taratura del vento ha " + Math.round((adesso - rif.t) / 60000) + " minuti: ritarala"};
   if (!vento || !Number.isFinite(vento.tws)) return {ok: false, motivo: "manca l'intensità del vento"};
-  if (adesso - vento.t > validitaMs) return {ok: false, motivo: "intensità del vento vecchia di " + Math.round((adesso - vento.t) / 60000) + " min: aggiornala"};
+  if (adesso - vento.t > validitaMs) return {ok: false, motivo: "l'intensità del vento ha " + Math.round((adesso - vento.t) / 60000) + " minuti: aggiornala"};
   if (classeVento(vento.tws) === null) return {ok: false, motivo: "vento sotto i 3 nodi"};
-  if (ultimoCambioVele && adesso - ultimoCambioVele < 60000) return {ok: false, motivo: "vele appena cambiate: attendo un minuto"};
+  if (ultimoCambioVele && adesso - ultimoCambioVele < 60000) return {ok: false, motivo: "vele appena cambiate: un minuto per regolarle"};
   const v = fixes.filter(f => adesso - f.received <= 20000 && Number.isFinite(f.cog) && Number.isFinite(f.sog));
   if (v.length < 14) return {ok: false, motivo: "pochi dati GPS"};
   const ultimo = v[v.length - 1];
   if (Number.isFinite(ultimo.accuracy) && ultimo.accuracy > 15) return {ok: false, motivo: "precisione GPS scarsa"};
   if (v.some(f => f.sog < minSog)) return {ok: false, motivo: "velocità bassa"};
   const m = circularMean(v.map(f => f.cog));
-  if (m === null || Math.max(...v.map(f => Math.abs(delta(f.cog, m)))) > 10) return {ok: false, motivo: "rotta non stabile da 20 secondi"};
+  if (m === null || Math.max(...v.map(f => Math.abs(delta(f.cog, m)))) > 10) return {ok: false, motivo: "rotta non ancora stabile da 20 secondi"};
   const recenti = v.filter(f => adesso - f.received <= 10000).map(f => f.sog);
   const media = recenti.reduce((a, b) => a + b, 0) / recenti.length;
-  if (Math.max(...recenti) - Math.min(...recenti) > Math.max(0.6, 0.2 * media)) return {ok: false, motivo: "velocità in cambiamento"};
+  if (Math.max(...recenti) - Math.min(...recenti) > Math.max(0.6, 0.2 * media)) return {ok: false, motivo: "velocità non ancora stabile"};
   const cogMedia = circularMean(v.filter(f => adesso - f.received <= 10000).map(f => f.cog));
   const twa = delta(cogMedia, rif.dir);
   if (Math.abs(twa) < 25) return {ok: false, motivo: "prua quasi al vento"};

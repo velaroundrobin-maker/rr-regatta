@@ -1,5 +1,5 @@
 // Funzioni pure per la schermata di navigazione: smorzamento, stato del dato, formati.
-import {norm,circularMean,distanceMeters,bearing} from "./engine.mjs?v=0.7.2";
+import {norm,circularMean,distanceMeters,bearing} from "./engine.mjs?v=0.7.3";
 
 const KN = 1.9438444924406;
 
@@ -42,7 +42,7 @@ export function statoDato(etaMs) {
   return etaMs <= ETA_VIVO_MS ? "vivo" : etaMs <= ETA_VECCHIO_MS ? "vecchio" : "perso";
 }
 
-export const numero = (v, decimali) => v.toFixed(decimali).replace(".", ",");
+export const numero = (v, decimali) => { const t = v.toFixed(decimali); return (Number(t) === 0 ? t.replace("-", "") : t).replace(".", ",").replace(/^-/, "−"); };
 export const angolo = a => String(Math.round(norm(a)) % 360).padStart(3, "0") + "°";
 
 // Gradi e primi decimali, come sulle carte nautiche: 44° 46,200′ N

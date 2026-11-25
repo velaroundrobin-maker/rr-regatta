@@ -1,6 +1,6 @@
 // Timer di partenza, cronometro e distanza-tempo dalla linea (v0.6).
 // Timer: «zero» è l'istante della partenza; prima si conta alla rovescia, dopo si conta il tempo di regata.
-import {rad, norm} from "./engine.mjs?v=0.7.2";
+import {rad, norm} from "./engine.mjs?v=0.7.3";
 
 const MINUTO = 60000;
 export const MINUTI_SEGNALE = [5, 4, 3, 2, 1];
@@ -71,7 +71,7 @@ export function distanzaTempo({barca, cog, sog, linea, dirVento = null, boa = nu
   }
   const lungo = (P.x - A.x) * u.x + (P.y - A.y) * u.y;          // posizione lungo la linea, da CdR verso P
   const oltre = P.x * n.x + P.y * n.y;                          // > 0 = oltre la linea (lato del percorso)
-  const fuori = lungo < -10 ? "oltre la barca CdR" : lungo > L + 10 ? "oltre la boa P" : null;
+  const fuori = lungo < -10 ? "fuori dalla linea, lato CdR" : lungo > L + 10 ? "fuori dalla linea, lato P" : null;
   const res = {lunghezza: L, fuori, orientata, oltreLinea: orientata && oltre > 0, distanza: orientata ? -oltre : Math.abs(oltre),
     verso: null, secondi: null, scarto: null};
   if (Number.isFinite(cog) && Number.isFinite(sog)) {

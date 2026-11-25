@@ -4,6 +4,12 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.7.3 — testi rivisti e guida
+
+- Tutti i testi riletti e corretti; si usa sempre il «tu». Navigazione: «Strumentazione di bordo»; Regata: «Strumentazione per la regata».
+- In Navigazione non compare più il pulsante della bolina stretta; la scheda «Schermo» si chiama «Strumenti».
+- Guida completa per i soci: https://velaroundrobin-maker.github.io/rr-regatta/guida/ (collegata dalla pagina iniziale).
+
 ## Versione 0.7 — pagina iniziale e preparazione guidata
 
 - All'apertura: Navigazione, Allenamento, Regata, Polari (più file, registro e impostazioni).

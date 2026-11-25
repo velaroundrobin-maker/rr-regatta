@@ -5,24 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.7.2">
+<link rel="stylesheet" href="./app.css?v=0.7.3">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.7.2</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.7.3</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
   <!-- PAGINA INIZIALE -->
   <main class="vista scorre" id="vista-home">
     <h1 class="home-titolo">Che cosa facciamo oggi?</h1>
-    <button type="button" class="modo-app" data-modo-app="navigazione"><strong>Navigazione</strong><span>Rotta, velocità, vento medio e andatura. Per andare per mare.</span></button>
+    <button type="button" class="modo-app" data-modo-app="navigazione"><strong>Navigazione</strong><span>Strumentazione di bordo: rotta, velocità, vento medio e andatura.</span></button>
     <button type="button" class="modo-app" data-modo-app="allenamento"><strong>Allenamento</strong><span>Esercizi con boe virtuali, prove di partenza con timer e cronometro.</span></button>
-    <button type="button" class="modo-app" data-modo-app="regata"><strong>Regata</strong><span>Campo di regata, linea di partenza, salti di vento, lay-line, arrivo.</span></button>
-    <button type="button" class="modo-app" data-modo-app="polari"><strong>Polari</strong><span>Misurare le velocità della barca per angolo, vento e vele.</span></button>
+    <button type="button" class="modo-app" data-modo-app="regata"><strong>Regata</strong><span>Strumentazione per la regata: campo, linea di partenza, salti di vento (buoni e scarsi), lay-line e arrivo.</span></button>
+    <button type="button" class="modo-app" data-modo-app="polari"><strong>Polari</strong><span>Misura delle velocità della barca a ogni angolo dal vento, per intensità del vento e vele a riva.</span></button>
+    <a class="secondario largo guida-link" href="./guida/">Guida all'app</a>
     <button type="button" class="secondario largo" id="home-altro">File, registro e impostazioni</button>
     <p class="aiuto" id="home-stato">—</p>
   </main>
@@ -34,19 +35,19 @@
       <p class="guida-intro" id="guida-intro">—</p>
     </section>
     <ol class="guida-passi" id="guida-passi"></ol>
-    <button type="button" class="principale largo" id="guida-vai">Vai allo schermo</button>
+    <button type="button" class="principale largo" id="guida-vai">Vai agli strumenti</button>
   </main>
 
   <!-- NAVIGAZIONE -->
   <main class="vista vista-nav" id="vista-nav" hidden>
     <section class="strumenti" aria-label="Strumenti di navigazione">
       <div class="strumento" id="cella-cog">
-        <span class="etichetta">ROTTA <small>COG</small></span>
+        <span class="etichetta">ROTTA</span>
         <output class="valore" id="cog">—</output>
         <span class="nota" id="nota-cog">GPS fermo</span>
       </div>
       <div class="strumento" id="cella-sog">
-        <span class="etichetta">VELOCITÀ <small>SOG</small></span>
+        <span class="etichetta">VELOCITÀ</span>
         <output class="valore"><span id="sog">—</span><small> kn</small></output>
         <span class="nota" id="nota-sog">GPS fermo</span>
       </div>
@@ -80,9 +81,9 @@
 
     <section class="prossima striscia-polari" id="striscia-polari" hidden aria-label="Polari">
       <div class="prossima-dati">
-        <div><span>ANGOLO DAL VENTO</span><b id="sp-twa">—</b></div>
+        <div><span>ANGOLO VENTO</span><b id="sp-twa">—</b></div>
         <div><span>POLARE</span><b id="sp-pol">—</b></div>
-        <div><span>RISPETTO</span><b id="sp-perc">—</b></div>
+        <div><span>% POLARE</span><b id="sp-perc">—</b></div>
       </div>
       <small class="pr-nota" id="sp-stato">—</small>
     </section>
@@ -90,7 +91,7 @@
     <section class="mappa" id="mappa" aria-label="Mappa: nord in alto">
       <svg id="carta" role="img" aria-label="Posizione della barca e delle boe"></svg>
       <div class="mappa-messaggio" id="mappa-messaggio">
-        <strong id="messaggio-titolo">Premi «Avvia GPS»</strong>
+        <strong id="messaggio-titolo">GPS spento</strong>
         <span id="messaggio-testo">La posizione della barca comparirà qui.</span>
       </div>
       <div class="allarme" id="allarme" role="alert" hidden>
@@ -140,15 +141,15 @@
         <button type="button" id="zoom-meno" aria-label="Riduci">−</button>
         <button type="button" id="tutto" class="testo" aria-label="Inquadra barca e boe">Tutto</button>
         <button type="button" id="segui" class="testo" aria-label="Centra sulla barca e seguila">Barca</button>
-        <button type="button" id="btn-crono" class="testo" aria-label="Timer di partenza e cronometro">Crono</button>
+        <button type="button" id="btn-crono" class="testo" aria-label="Timer di partenza e cronometro">Timer</button>
       </div>
     </section>
 
     <section class="azioni">
-      <button type="button" class="principale" id="btn-gps">Avvia GPS</button>
-      <button type="button" class="interruttore-bolina" id="btn-bolina" aria-pressed="false" hidden>Bolina stretta?</button>
+      <button type="button" class="principale" id="btn-gps">Accendi GPS</button>
+      <button type="button" class="interruttore-bolina" id="btn-bolina" aria-pressed="false" hidden>Bolina stretta: no</button>
       <button type="button" class="secondario" id="btn-passata">Boa passata ›</button>
-      <button type="button" class="interruttore-bolina registra-azione" id="btn-registra" aria-pressed="false" hidden>Registra: no</button>
+      <button type="button" class="interruttore-bolina registra-azione" id="btn-registra" aria-pressed="false" hidden>Registra</button>
       <button type="button" class="principale" id="btn-traguardo" hidden>Taglia il traguardo</button>
     </section>
   </main>
@@ -166,7 +167,7 @@
     </nav>
     <section class="blocco" id="blocco-rilievo" hidden>
       <h2>RILEVAMENTO · BOA <span id="ril-codice">—</span></h2>
-      <p class="aiuto">Guarda la boa e stima di quanti gradi si trova a sinistra o a dritta della prua. La rotta GPS sostituisce la prua: con corrente o scarroccio c'è un piccolo errore.</p>
+      <p class="aiuto">Guarda la boa e stima di quanti gradi si trova a sinistra o a dritta della prua. Al posto della prua l'app usa la rotta GPS: con corrente o scarroccio c'è un piccolo errore.</p>
       <div class="segmento" role="group" aria-label="Lato">
         <button type="button" data-lato="-1" aria-pressed="true">A sinistra</button>
         <button type="button" data-lato="1" aria-pressed="false">A dritta</button>
@@ -183,7 +184,7 @@
       <p class="aiuto">Tocca una tappa per farla diventare la prossima.</p>
       <details class="configura allenamento" id="allenamento">
         <summary>Campo d'allenamento (boe virtuali)</summary>
-        <p class="aiuto">Per gli esercizi senza boe vere: l'app costruisce il campo intorno alla barca, orientato sul vento. Le boe sono virtuali e la navigazione funziona come in regata. Dopo puoi spostarle o aggiungerne con «Disegna sulla mappa».</p>
+        <p class="aiuto">Per gli esercizi senza boe vere: l'app costruisce il campo intorno alla barca, orientato sul vento. Le boe sono virtuali e l'app le gestisce come in regata. Poi puoi spostarle o aggiungerne con «Disegna sulla mappa».</p>
         <div class="scelte due" id="all-tipo">
           <button type="button" data-tipo="partenza" aria-pressed="true">Solo partenza</button>
           <button type="button" data-tipo="bolina" aria-pressed="false">Partenza e bolina</button>
@@ -223,13 +224,13 @@
     <section class="blocco" id="sez-taratura">
       <h2>TARATURA DEL VENTO</h2>
       <p class="tar-stato" id="tar-stato">—</p>
-      <button type="button" class="principale largo" id="tar-motore">Memorizza vento a motore</button>
-      <p class="aiuto">A motore, prua esattamente al vento, rotta costante per una decina di secondi, poi premi.</p>
+      <button type="button" class="principale largo" id="tar-motore">Prua al vento a motore: memorizza</button>
+      <p class="aiuto">Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi.</p>
       <div class="riga-pulsanti">
         <button type="button" class="secondario" id="tar-dritta">Bolina mure a dritta</button>
         <button type="button" class="secondario" id="tar-sinistra">Bolina mure a sinistra</button>
       </div>
-      <p class="aiuto">Facoltativo, per ora: in bolina stretta ben regolata, rotta costante, premi il pulsante della mura su cui sei, poi sull'altra. L'app misura così il vostro angolo di virata reale, che serve alle lay-line.</p>
+      <p class="aiuto">Facoltativo, per ora: in bolina stretta ben regolata e con rotta costante, premi il pulsante della mura su cui sei, poi fai lo stesso sull'altra mura. L'app misura così l'angolo di virata reale della barca, che serve per le lay-line.</p>
       <div class="riga-mano">
         <label>Vento a mano <input id="tar-mano" type="number" inputmode="numeric" min="0" max="359" placeholder="gradi"></label>
         <button type="button" class="secondario" id="tar-mano-ok">Imposta</button>
@@ -274,7 +275,7 @@
       </div>
       <button type="button" class="interruttore" id="imp-audio" aria-pressed="true">Suono dell'allarme: sì</button>
       <button type="button" class="interruttore" id="imp-dieci" aria-pressed="false">Timer: beep negli ultimi 10 secondi: no</button>
-      <p class="aiuto">L'angolo di virata tipico si usa solo finché non avete registrato le boline sulle due mure.</p>
+      <p class="aiuto">L'angolo di virata tipico si usa finché non registri le boline sulle due mure.</p>
     </section>
   </main>
 
@@ -284,7 +285,7 @@
   <main class="vista scorre" id="vista-polari" hidden>
     <section class="blocco">
       <h2>REGISTRAZIONE DELLE POLARI</h2>
-      <button type="button" class="interruttore registra" id="pol-registra" aria-pressed="false">Registra le polari: no</button>
+      <button type="button" class="interruttore registra" id="pol-registra" aria-pressed="false">Avvia la registrazione</button>
       <p class="pol-stato" id="pol-stato">—</p>
       <div class="vento-griglia">
         <div><span>Angolo dal vento</span><b id="pol-twa">—</b><small id="pol-twa-nota">&nbsp;</small></div>
@@ -298,7 +299,7 @@
       <p class="tar-stato" id="pol-vento-stato">—</p>
       <p class="sotto-titolo">Direzione</p>
       <button type="button" class="secondario largo" id="pol-motore">Prua al vento a motore: memorizza</button>
-      <p class="aiuto">Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi. La registrazione si ferma quando la taratura è più vecchia del limite scelto in fondo alla pagina: ritarate per tempo.</p>
+      <p class="aiuto">Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi. Quando la taratura supera il limite scelto in fondo alla pagina, la registrazione va in pausa: ritara per tempo.</p>
       <p class="sotto-titolo">Intensità (anemometro di coperta, a barca ferma)</p>
       <div class="riga-vento">
         <button type="button" class="passo" data-passo="-1" aria-label="Un nodo in meno">−</button>
@@ -306,7 +307,7 @@
         <button type="button" class="passo" data-passo="1" aria-label="Un nodo in più">+</button>
       </div>
       <button type="button" class="principale largo" id="pol-tws-ok">Inserisci il vento</button>
-      <p class="aiuto">A barca ferma l'anemometro legge il vento vero; mentre navigate legge il vento apparente, quindi non usatelo a vela. Leggetelo sempre nello stesso punto, il più in alto possibile e lontano dalle vele.</p>
+      <p class="aiuto">A barca ferma l'anemometro legge il vento vero; in navigazione legge il vento apparente, quindi non usarlo a vela. Leggilo sempre nello stesso punto, il più in alto possibile e lontano dalle vele.</p>
     </section>
 
     <section class="blocco">
@@ -318,7 +319,7 @@
       <div class="scelte tre" id="pol-randa"></div>
       <p class="sotto-titolo">Vele colorate</p>
       <div class="scelte" id="pol-portante"></div>
-      <p class="aiuto">Dopo un cambio di vele l'app aspetta un minuto prima di registrare, il tempo di regolarle.</p>
+      <p class="aiuto">Dopo un cambio di vele l'app aspetta un minuto prima di registrare: il tempo di regolarle.</p>
     </section>
 
     <section class="blocco">
@@ -330,7 +331,7 @@
       <p class="tar-stato" id="pol-ottimi">—</p>
       <button type="button" class="secondario largo" id="pol-usa-virata" hidden>Usa questo angolo di virata in regata</button>
       <table class="tabella-polare" id="pol-tabella"></table>
-      <p class="aiuto">Velocità sul fondo. In ogni casella l'app prende la velocità superata solo dal 20% dei punti (80° percentile): è la velocità della barca ben condotta, senza le punte dovute alle onde. Servono almeno 30 secondi di navigazione stabile per casella; con meno dati il valore è tra parentesi. D/S: punti con mure a dritta e a sinistra. Navigate ogni angolo su tutte e due le mure, così la corrente si compensa.</p>
+      <p class="aiuto">Velocità sul fondo. In ogni casella l'app prende la velocità superata solo dal 20% dei punti (80° percentile): è la velocità della barca ben condotta, senza le punte dovute alle onde. Servono almeno 30 secondi di navigazione stabile per casella; con meno dati il valore è tra parentesi. D/S: punti con mure a dritta e a sinistra. Naviga ogni angolo su tutte e due le mure, così l'effetto della corrente si compensa.</p>
     </section>
 
     <section class="blocco">
@@ -345,7 +346,7 @@
         <button type="button" class="secondario" id="pol-importa">Importa</button>
         <input type="file" id="pol-file" accept=".json,application/json" hidden>
       </div>
-      <p class="aiuto">Esporta: tutti i punti, da mandare per l'analisi. Tabella: la polare per il foglio di calcolo. Importa: aggiunge i punti di un altro file, senza doppioni. Le polari restano sul telefono anche con «Nuova sessione».</p>
+      <p class="aiuto">Esporta: tutti i punti, da mandare per l'analisi. Tabella: la polare da aprire con un foglio di calcolo. Importa: aggiunge i punti di un altro file, senza doppioni. Le polari restano sul telefono anche con «Nuova sessione».</p>
       <button type="button" class="secondario largo" id="pol-scarta">Scarta gli ultimi 5 minuti</button>
       <button type="button" class="collegamento-testo" id="pol-azzera">Cancella tutte le polari</button>
     </section>
@@ -356,12 +357,12 @@
     <section class="blocco">
       <h2>SCHERMO E MAPPA</h2>
       <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
-      <p class="aiuto">A schermo spento il browser smette di ricevere il GPS: in regata tienilo acceso.</p>
+      <p class="aiuto">A schermo spento il telefono smette di leggere il GPS: in navigazione tienilo acceso.</p>
       <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia sulla mappa: no</button>
     </section>
     <section class="blocco">
       <h2>SESSIONE</h2>
-      <p class="aiuto">Tutto viene salvato da solo su questo telefono. Esporta un file per conservarlo o spostarlo su un altro dispositivo.</p>
+      <p class="aiuto">Tutto si salva da solo su questo telefono. Esporta un file per conservarlo o per spostarlo su un altro dispositivo.</p>
       <div class="riga-pulsanti">
         <button type="button" class="secondario" id="btn-esporta">Esporta</button>
         <button type="button" class="secondario" id="btn-importa">Importa</button>
@@ -375,7 +376,7 @@
     </section>
     <section class="blocco">
       <a class="secondario largo" href="./diagnostica/">Diagnostica GPS</a>
-      <p class="aiuto">Laboratorio sperimentale di Round Robin A.S.D. Le stime non sostituiscono osservazione e decisioni dell'equipaggio. Nessun dato lascia il telefono.</p>
+      <p class="aiuto">Laboratorio sperimentale di Round Robin A.S.D. Le stime non sostituiscono l'osservazione e le decisioni dell'equipaggio. Nessun dato lascia il telefono.</p>
     </section>
   </main>
 
@@ -383,6 +384,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.7.2"></script>
+<script type="module" src="./js/app.mjs?v=0.7.3"></script>
 </body>
 </html>

@@ -30,6 +30,8 @@ test("stato del dato in base all'età", () => {
 });
 test("formati italiani", () => {
   assert.equal(numero(5.25, 1), "5,3");
+  assert.equal(numero(-1.04, 1), "−1,0");
+  assert.equal(numero(-0.01, 1), "0,0");
   assert.equal(angolo(359.7), "000°");
   assert.equal(angolo(47.2), "047°");
   assert.equal(coordinata(44.77, true), "44° 46,200′ N");

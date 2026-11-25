@@ -25,10 +25,10 @@ test("punto accettato solo con rotta e velocità stabili da 20 secondi", () => {
   const base = {adesso, rif, vento, validitaMs: 20 * 60000};
   const ok = valutaPunto({...base, fixes: fx(i => 45 + (i % 3), () => 6)});
   assert.equal(ok.ok, true); assert.ok(Math.abs(ok.twa - 46) < 1.5); assert.equal(ok.sog, 6);
-  assert.equal(valutaPunto({...base, fixes: fx(i => i < 8 ? 315 : 45, () => 6)}).motivo, "rotta non stabile da 20 secondi");
-  assert.equal(valutaPunto({...base, fixes: fx(() => 90, i => 4 + i * 0.15)}).motivo, "velocità in cambiamento");
+  assert.equal(valutaPunto({...base, fixes: fx(i => i < 8 ? 315 : 45, () => 6)}).motivo, "rotta non ancora stabile da 20 secondi");
+  assert.equal(valutaPunto({...base, fixes: fx(() => 90, i => 4 + i * 0.15)}).motivo, "velocità non ancora stabile");
   assert.equal(valutaPunto({...base, fixes: fx(() => 10, () => 3)}).motivo, "prua quasi al vento");
-  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso - 25 * 60000}, fixes: fx(() => 90, () => 6)}).motivo, /taratura del vento vecchia di 25 min/);
+  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso - 25 * 60000}, fixes: fx(() => 90, () => 6)}).motivo, /la taratura del vento ha 25 minuti/);
   assert.match(valutaPunto({...base, vento: null, fixes: fx(() => 90, () => 6)}).motivo, /intensità/);
   assert.match(valutaPunto({...base, ultimoCambioVele: adesso - 10000, fixes: fx(() => 90, () => 6)}).motivo, /vele appena cambiate/);
 });

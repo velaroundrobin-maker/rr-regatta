@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="../round-robin-logo.png" type="image/png">
+<title>Guida a RR Regatta · Round Robin A.S.D.</title>
+<style>
+:root{--nero:#000;--fondo:#0b0b0b;--pannello:#161616;--linea:#383838;--grigio:#b5b5b5;--rosso:#ff0000}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:#fff;font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--nero);border-bottom:3px solid var(--rosso);position:sticky;top:0;z-index:2}
+header img{width:40px;height:40px;border-radius:50%;background:#fff}
+header strong{font-size:18px;display:block;line-height:1.1}
+header small{color:var(--grigio);font-size:13px}
+header a{margin-left:auto;color:#fff;font-weight:800;font-size:14px;border:2px solid var(--rosso);border-radius:10px;padding:8px 12px;text-decoration:none;white-space:nowrap}
+main{max-width:760px;margin:0 auto;padding:12px 16px 60px}
+h1{font-size:28px;line-height:1.2;margin:18px 0 6px}
+h2{font-size:21px;color:var(--rosso);margin:34px 0 8px;padding-top:6px;border-top:1px solid var(--linea);letter-spacing:.2px}
+h3{font-size:18px;margin:22px 0 6px}
+p{margin:8px 0}
+ul,ol{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+a{color:#fff}
+.sottotitolo{color:var(--grigio);margin-top:0}
+.riquadro{background:var(--pannello);border:1px solid var(--linea);border-left:4px solid var(--rosso);border-radius:12px;padding:10px 14px;margin:14px 0}
+.riquadro p:first-child{margin-top:0}.riquadro p:last-child{margin-bottom:0}
+.indice{background:var(--pannello);border:1px solid var(--linea);border-radius:12px;padding:8px 14px;margin:16px 0}
+.indice ol{margin:6px 0;padding-left:20px}
+.indice a{text-decoration:none;border-bottom:1px solid #666}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:15px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #2c2c2c;vertical-align:top}
+th{color:var(--grigio);font-size:13px;border-bottom:1px solid #444}
+b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius:6px;padding:0 7px;font-size:15px;white-space:nowrap}
+.piede{color:var(--grigio);font-size:14px;margin-top:40px;border-top:1px solid var(--linea);padding-top:12px}
+</style>
+</head>
+<body>
+<header>
+  <img src="../round-robin-logo.png" alt="Logo Round Robin">
+  <div><strong>RR Regatta</strong><small>Guida all'app · versione 0.7.3</small></div>
+  <a href="../">Apri l'app</a>
+</header>
+<main>
+
+<h1>Guida a RR Regatta</h1>
+<p class="sottotitolo">Lo strumento tattico gratuito di Round Robin A.S.D. per chi regata su cabinati senza strumentazione elettronica.</p>
+
+<div class="indice">
+  <strong>In questa guida</strong>
+  <ol>
+    <li><a href="#cose">Che cos'è e perché lo facciamo</a></li>
+    <li><a href="#serve">Che cosa serve</a></li>
+    <li><a href="#inizio">Pagina iniziale e preparazione guidata</a></li>
+    <li><a href="#taratura">La taratura del vento</a></li>
+    <li><a href="#navigazione">Navigazione</a></li>
+    <li><a href="#allenamento">Allenamento</a></li>
+    <li><a href="#regata">Regata</a></li>
+    <li><a href="#polari">Polari</a></li>
+    <li><a href="#timer">Timer di partenza e cronometro</a></li>
+    <li><a href="#file">File, registro e impostazioni</a></li>
+    <li><a href="#limiti">Limiti e avvertenze</a></li>
+    <li><a href="#parole">Parole che trovi nell'app</a></li>
+  </ol>
+</div>
+
+<h2 id="cose">1. Che cos'è e perché lo facciamo</h2>
+<p>RR Regatta trasforma il telefono (o il tablet) in uno strumento di bordo. Usa solo il <strong>GPS del telefono</strong> e quello che l'equipaggio gli dice: la direzione del vento tarata a motore, le boe, le vele a riva, l'intensità letta sull'anemometro.</p>
+<p>Lo scopo non è andare più veloci in assoluto, ma <strong>arrivare prima alla boa</strong>. Quindi l'app vi aiuta a:</p>
+<ul>
+  <li>capire se il vento è girato a favore (<em>buono</em>) o contro (<em>scarso</em>) e quando conviene virare;</li>
+  <li>sapere su quale mura si va più verso la boa e quando si è sulla lay-line;</li>
+  <li>scegliere l'estremo favorito della linea di partenza e partire in tempo;</li>
+  <li>conoscere le velocità della barca (le polari) per regolarla meglio.</li>
+</ul>
+<p>È un progetto sperimentale, sviluppato e provato da Round Robin. Ogni valore sullo schermo dice da dove viene: misurato dal telefono, calcolato, stimato, preso dalle istruzioni di regata o virtuale. <strong>Le decisioni restano dell'equipaggio.</strong></p>
+
+<h2 id="serve">2. Che cosa serve</h2>
+<ul>
+  <li>Un telefono o tablet Android con <strong>Chrome</strong>. Il programma funziona anche su altri dispositivi, ma è provato su Android.</li>
+  <li>Il collegamento all'app: <a href="../">velaroundrobin-maker.github.io/rr-regatta</a>. Per averla come un'app vera: in Chrome apri il menu (i tre puntini) e scegli <b class="tasto">Aggiungi a schermata Home</b>.</li>
+  <li>Il telefono <strong>in carica</strong> durante l'uscita: GPS e schermo acceso consumano batteria.</li>
+  <li>Una custodia impermeabile e un supporto in pozzetto, visibile dal timoniere o dal tattico.</li>
+  <li>Per le polari: l'anemometro di coperta.</li>
+</ul>
+<p>Per ora serve la connessione a internet per aprire l'app. Una volta aperta, i dati restano sul telefono: nessuna informazione viene inviata altrove.</p>
+<div class="riquadro">
+  <p><strong>La prima volta</strong> Chrome chiede il permesso di usare la posizione: rispondi <b class="tasto">Consenti</b>. In alto a sinistra, sotto il nome dell'app, c'è il numero di versione: se è più vecchio di quello di questa guida, ricarica la pagina.</p>
+</div>
+
+<h2 id="inizio">3. Pagina iniziale e preparazione guidata</h2>
+<p>All'apertura il GPS si accende da solo e compare la domanda <strong>«Che cosa facciamo oggi?»</strong> con quattro modalità:</p>
+<table>
+  <tr><th>Modalità</th><th>A che cosa serve</th></tr>
+  <tr><td><strong>Navigazione</strong></td><td>Strumentazione di bordo: rotta, velocità, vento medio e andatura.</td></tr>
+  <tr><td><strong>Allenamento</strong></td><td>Esercizi con boe virtuali, prove di partenza con timer e cronometro.</td></tr>
+  <tr><td><strong>Regata</strong></td><td>Strumentazione per la regata: campo, linea di partenza, salti di vento, lay-line, arrivo.</td></tr>
+  <tr><td><strong>Polari</strong></td><td>Misura delle velocità della barca per angolo dal vento, intensità del vento e vele.</td></tr>
+</table>
+<p>Scelta la modalità, si apre la <strong>preparazione</strong>: una lista di passi, ognuno con una breve spiegazione e i pulsanti per farlo subito. Quando un passo è fatto compare la spunta. I passi segnati «facoltativo» si possono saltare. Alla fine premi <b class="tasto">Vai agli strumenti</b>.</p>
+<p>In basso ci sono le schede della modalità:</p>
+<ul>
+  <li><strong>Strumenti</strong>: lo schermo da guardare navigando;</li>
+  <li><strong>Preparazione</strong>: la lista dei passi, per controllare o rifare qualcosa;</li>
+  <li><strong>Campo</strong>, <strong>Regata</strong> o <strong>Polari</strong>: tutte le impostazioni e i dettagli della modalità;</li>
+  <li><strong>Menu</strong>: torna alla pagina iniziale.</li>
+</ul>
+<p>Entrando in una modalità lo schermo resta acceso da solo: a schermo spento il telefono smette di leggere il GPS e il timer non suona.</p>
+
+<h2 id="taratura">4. La taratura del vento</h2>
+<p>Il telefono non sa da dove viene il vento: glielo dobbiamo dire noi. Si fa con la <strong>prua al vento a motore</strong>:</p>
+<ol>
+  <li>con il motore, metti la prua esattamente al vento (vele che fileggiano in modo simmetrico, segnavento in testa d'albero dritto a prua);</li>
+  <li>tieni la rotta costante per una decina di secondi, sopra 1,5 nodi;</li>
+  <li>premi <b class="tasto">Prua al vento a motore: memorizza</b>.</li>
+</ol>
+<p>L'app usa la rotta sul fondo come direzione del vento. Con molta corrente traversale c'è un piccolo errore: meglio tarare dove la corrente è debole.</p>
+<p>Il vento gira: ripeti la taratura quando cambia in modo evidente e, per le polari, almeno ogni 20 minuti. L'app ti dice sempre da quanto tempo è stata fatta.</p>
+<div class="riquadro">
+  <p><strong>Le boline (facoltative, per ora).</strong> Nella scheda Regata, sezione Taratura, ci sono anche i pulsanti <b class="tasto">Bolina mure a dritta</b> e <b class="tasto">Bolina mure a sinistra</b>. Si premono in bolina stretta ben regolata, con rotta costante, una volta per mura: l'app misura così l'angolo di virata reale della barca, che rende più precise le lay-line.</p>
+</div>
+
+<h2 id="navigazione">5. Navigazione</h2>
+<p>Lo schermo mostra quattro valori grandi e la mappa:</p>
+<table>
+  <tr><th>Valore</th><th>Che cosa significa</th></tr>
+  <tr><td><strong>Rotta</strong></td><td>La direzione in cui la barca si muove sul fondo, in gradi (rotta sul fondo, misurata dal GPS).</td></tr>
+  <tr><td><strong>Velocità</strong></td><td>La velocità sul fondo, in nodi.</td></tr>
+  <tr><td><strong>Vento medio</strong></td><td>Da dove viene il vento: la taratura a motore, oppure la media delle stime raccolte di bolina.</td></tr>
+  <tr><td><strong>Andatura</strong></td><td>L'angolo tra rotta e vento, con la mura.</td></tr>
+</table>
+<p>Le andature, con i limiti usati dall'app (indicativi: la bolina stretta reale dipende dalla barca):</p>
+<table>
+  <tr><th>Angolo dal vento</th><th>Andatura</th></tr>
+  <tr><td>meno di 30°</td><td>Prua al vento</td></tr>
+  <tr><td>30° – 50°</td><td>Bolina stretta</td></tr>
+  <tr><td>50° – 75°</td><td>Bolina larga</td></tr>
+  <tr><td>75° – 105°</td><td>Traverso</td></tr>
+  <tr><td>105° – 135°</td><td>Lasco</td></tr>
+  <tr><td>135° – 165°</td><td>Gran lasco</td></tr>
+  <tr><td>oltre 165°</td><td>Poppa</td></tr>
+</table>
+<p>Sulla mappa (nord in alto) ci sono la barca, la freccia del vento e la scala. Con <b class="tasto">+</b> e <b class="tasto">−</b> ingrandisci, con <b class="tasto">Barca</b> la mappa torna a seguire la barca, con <b class="tasto">Tutto</b> inquadra barca e boe. Il pulsante <b class="tasto">Timer</b> apre timer di partenza e cronometro.</p>
+
+<h2 id="allenamento">6. Allenamento</h2>
+<p>Serve per gli esercizi in acqua, anche senza boe vere. La preparazione propone:</p>
+<ol>
+  <li>GPS e schermo acceso (di solito già fatti);</li>
+  <li><strong>direzione del vento</strong>, con la prua al vento a motore: serve per orientare le boe;</li>
+  <li><strong>boe virtuali</strong> (facoltativo): punti sulla mappa che l'app ti fa girare come boe vere;</li>
+  <li><strong>timer di partenza</strong> (facoltativo), per le prove di partenza.</li>
+</ol>
+<h3>Campi pronti</h3>
+<p>Si costruiscono intorno alla barca, orientati sul vento. Le misure predefinite sono una linea di 100 m e la boa di bolina a 400 m; si cambiano nella scheda <strong>Campo</strong>, sotto «Campo d'allenamento».</p>
+<table>
+  <tr><th>Campo</th><th>Com'è fatto</th></tr>
+  <tr><td>Solo partenza</td><td>Linea di partenza perpendicolare al vento, con il centro sulla barca.</td></tr>
+  <tr><td>Partenza e bolina</td><td>La linea e la boa 1 sopravvento; si arriva sulla linea di partenza.</td></tr>
+  <tr><td>Bastone</td><td>La linea, la boa 1 sopravvento e la boa 2 cinquanta metri sotto la linea; da 1 a 3 giri, arrivo sulla linea.</td></tr>
+  <tr><td>Due boe</td><td>Boa 1 sopravvento e boa 2 dove si trova la barca, senza partenza.</td></tr>
+</table>
+<p>La barca giuria (CdR) è sempre all'estremo destro della linea guardando verso il vento, la boa P a sinistra.</p>
+<h3>Disegnare sulla mappa</h3>
+<p>Con <b class="tasto">Le disegno io</b> (o <b class="tasto">Disegna sulla mappa</b> nella scheda Campo) si apre la mappa con una barra in basso:</p>
+<ul>
+  <li>scegli <b class="tasto">Boa</b>, <b class="tasto">CdR</b> o <b class="tasto">P</b> e tocca la mappa nel punto voluto;</li>
+  <li>trascina una boa per spostarla; toccala per sceglierla e poi premi <b class="tasto">Togli</b> per eliminarla;</li>
+  <li><b class="tasto">↶</b> annulla l'ultima modifica, <b class="tasto">Fine</b> chiude il disegno.</li>
+</ul>
+<p>Le boe virtuali hanno un cerchio rosso tratteggiato. Il percorso si aggiorna da solo: una boa nuova si aggiunge prima dell'arrivo.</p>
+<p>Durante l'esercizio lo schermo Strumenti funziona come in regata: striscia «Verso» con la boa successiva, distanza, rilevamento e VMC, pulsante <b class="tasto">Boa passata</b>.</p>
+
+<h2 id="regata">7. Regata</h2>
+<h3>Preparazione, sul campo di regata</h3>
+<ol>
+  <li><strong>Percorso</strong>: scegli quello delle istruzioni di regata. Ci sono i modelli di Loano (pennelli 1–5) e di Alassio 2026, oppure si costruisce disegnando sulla mappa.</li>
+  <li><strong>Linea di partenza</strong>: passa vicino alla barca giuria e premi <b class="tasto">Segna CdR</b>, poi vicino alla boa P e premi <b class="tasto">Segna P</b>.</li>
+  <li><strong>Boa di bolina</strong>: se ci passi vicino, <b class="tasto">Segna GPS</b>. Altrimenti <b class="tasto">Rileva</b>: guardala, indica di quanti gradi si trova a sinistra o a dritta della prua e registra. Un rilevamento dà la direzione; due rilevamenti da punti diversi danno la posizione.</li>
+  <li><strong>Direzione del vento</strong>: prua al vento a motore, poco prima della partenza.</li>
+  <li><strong>Timer</strong>: al segnale dei 5 minuti premi <b class="tasto">Avvia −5:00</b>, a ogni segnale successivo <b class="tasto">Sincronizza</b> (vedi il <a href="#timer">capitolo 9</a>).</li>
+</ol>
+<h3>In regata: lo schermo Strumenti</h3>
+<ul>
+  <li><strong>Rotta, velocità, vento</strong>: nella casella del vento, quando sei di bolina, compare <strong>BUONO</strong> o <strong>SCARSO</strong> con i gradi del salto.</li>
+  <li><strong>Striscia «Verso»</strong>: la prossima boa, il rilevamento, la distanza e la VMC (velocità verso la boa). Sotto, l'indicazione tattica.</li>
+  <li><b class="tasto">Boa passata</b>: dopo ogni boa premilo per passare alla tappa successiva. All'ultima tappa compare <b class="tasto">Taglia il traguardo</b>, che registra ora e posizione dell'arrivo.</li>
+</ul>
+<h3>Il pulsante «Bolina stretta»</h3>
+<p>I salti di vento si stimano solo di bolina stretta. Quando siete in bolina stretta ben regolata, premi <b class="tasto">Bolina stretta: no</b>: diventa <b class="tasto">BOLINA STRETTA ✓</b>. Da quel momento l'app stima il vento dalla rotta, scartando le virate e i momenti in cui la rotta non è stabile. Se la barca poggia a lungo si spegne da sola.</p>
+<h3>Buono, scarso e allarmi</h3>
+<ul>
+  <li>Il <strong>vento medio</strong> è la media degli ultimi 5 minuti (si può cambiare in 3 o 10). Il salto è la differenza tra il vento degli ultimi 20 secondi e la media.</li>
+  <li><strong>Buono</strong>: il vento è girato a favore della mura su cui sei (puoi orzare). <strong>Scarso</strong>: è girato contro (devi poggiare) ed è il momento di valutare la virata.</li>
+  <li><strong>Allarme SCARSO</strong>: se lo scarso supera la soglia (predefinita 6°) per almeno 20 secondi, lo schermo lampeggia in rosso, il telefono vibra e suona. Premi <b class="tasto">Visto</b>.</li>
+  <li><strong>Allarme VENTO RUOTATO</strong>: se è il vento medio stesso a girare di almeno 8° per un minuto. Può essere l'inizio di una rotazione persistente.</li>
+</ul>
+<h3>Tipo di vento</h3>
+<p>Nella scheda Regata, sezione Vento, dopo almeno 8 minuti di bolina l'app classifica il vento e dà il consiglio dei manuali di tattica:</p>
+<ul>
+  <li><strong>Oscillante</strong> (con ampiezza e periodo): vira sugli scarsi quando superano la media, resta al centro fino all'ultimo terzo della bolina;</li>
+  <li><strong>Persistente</strong> verso destra o sinistra: vai verso il lato in cui gira il vento, prima lo scarso, poi vira e arriva in boa sul buono, senza superare la lay-line;</li>
+  <li><strong>Stabile</strong>: conta più la velocità, poche virate.</li>
+</ul>
+<h3>Indicazioni tattiche</h3>
+<ul>
+  <li><strong>Mure favorite</strong>: la mura che punta più verso la boa, con i gradi di vantaggio.</li>
+  <li><strong>Lay-line</strong>: la distanza dalla lay-line; <strong>IN LAY-LINE: VIRA</strong> quando è il momento di virare per prendere la boa; «Oltre la lay-line» se l'hai superata. Sulla mappa le lay-line sono disegnate dalla boa di bolina.</li>
+  <li><strong>Linea di partenza</strong>: entro 500 m dalla linea, sullo schermo compare l'estremo favorito (barca CdR o boa P) con i metri di vantaggio. Nella scheda Regata ci sono anche lo sbilanciamento in gradi e il vantaggio in lunghezze di barca. Se lo sbilanciamento è piccolo, conta più partire con aria libera.</li>
+</ul>
+
+<h2 id="polari">8. Polari</h2>
+<p>Le polari sono le velocità che la barca raggiunge a ogni angolo dal vento, per ogni intensità del vento e combinazione di vele. Servono per sapere se si sta andando bene e, più avanti, per i consigli su quando orzare o poggiare.</p>
+<h3>Come si fa un'uscita per le polari</h3>
+<ol>
+  <li><strong>Direzione del vento</strong>: prua al vento a motore. Vale 20 minuti (si può portare fino a 45 nella scheda Polari); poi la registrazione va in pausa finché non la rifai.</li>
+  <li><strong>Intensità</strong>: a barca ferma, leggi l'anemometro di coperta e inserisci il valore in nodi. In navigazione l'anemometro legge il vento apparente, quindi non va usato a vela. Leggilo sempre nello stesso punto.</li>
+  <li><strong>Vele a riva</strong>: vela di prua (J1, J2, J3, Tormentina), randa (piena, 1 mano, 2 mani), vele colorate (nessuna, Spinnaker, Gennaker, Code 0). Dopo ogni cambio l'app aspetta un minuto prima di registrare.</li>
+  <li><b class="tasto">Avvia la registrazione</b>, poi naviga un angolo alla volta, almeno un minuto per mura, su <strong>tutte e due le mure</strong>: bolina stretta, 50°, 60°, 75°, 90°, 110°, 135°, 150°, 165°.</li>
+</ol>
+<p>L'app registra un punto ogni 2 secondi solo quando rotta e velocità sono stabili da 20 secondi. Sullo schermo Strumenti vedi l'angolo dal vento, la velocità della polare a quell'angolo e a quanti per cento state andando.</p>
+<p>Se un tratto è venuto male (vele sbattenti, timoniere distratto), premi <b class="tasto">Scarta gli ultimi 5 minuti</b>.</p>
+<h3>Come si legge la polare</h3>
+<p>Nella scheda Polari c'è il diagramma: il vento viene dall'alto, la distanza dal centro è la velocità. In ogni casella l'app prende la velocità superata solo dal 20% dei punti: è la velocità della barca ben condotta, senza le punte dovute alle onde. Servono almeno 30 secondi di navigazione stabile per casella; con meno dati il valore è tra parentesi. Sotto ci sono l'angolo migliore di bolina e di poppa, con la VMC; il pulsante <b class="tasto">Usa … come angolo di virata in regata</b> passa il valore alla modalità Regata.</p>
+
+<h2 id="timer">9. Timer di partenza e cronometro</h2>
+<p>Si aprono dal pulsante <b class="tasto">Timer</b> sulla mappa. Chiudendo la finestra con <b class="tasto">×</b> il timer continua e resta visibile in alto sulla mappa.</p>
+<h3>Timer di partenza</h3>
+<ul>
+  <li><b class="tasto">Avvia −5:00</b> al segnale dei 5 minuti.</li>
+  <li><strong>Segnali sonori</strong>: un beep lungo e forte a −5, −4, −3, −2 e −1 minuti; allo zero una raffica di beep: partiti. Dopo lo zero il timer conta il tempo di regata. Nella scheda Regata o Campo, sezione Allarmi, si possono aggiungere i beep negli ultimi 10 secondi.</li>
+  <li><b class="tasto">Sincronizza</b>: a ogni segnale della giuria porta il timer al minuto intero più vicino. <b class="tasto">−1′</b> e <b class="tasto">+1′</b> spostano di un minuto; <b class="tasto">Stop</b> lo ferma.</li>
+  <li><strong>Distanza e tempo dalla linea</strong>: con CdR e P segnati, il timer mostra quanti metri mancano alla linea, quanti secondi servono alla velocità attuale e se arriverai in <strong>anticipo</strong> o in <strong>ritardo</strong> sullo zero. Prima della partenza, se sei già oltre la linea, compare <strong>OLTRE LA LINEA: torna sotto!</strong></li>
+</ul>
+<h3>Cronometro</h3>
+<p><b class="tasto">Avvia</b>, <b class="tasto">Stop</b>, <b class="tasto">Riprendi</b>, <b class="tasto">Azzera</b>. Con <b class="tasto">Parziale</b> registri un tempo intermedio: per ognuno l'app mostra anche i metri percorsi e la velocità media dal parziale precedente. Serve per misurare quanto ci si mette a coprire una distanza, per esempio nelle prove di avvicinamento alla linea.</p>
+
+<h2 id="file">10. File, registro e impostazioni</h2>
+<p>Dalla pagina iniziale, <b class="tasto">File, registro e impostazioni</b>:</p>
+<ul>
+  <li><strong>Esporta</strong>: scarica un file con tutta la sessione (campo, boe, eventi, traccia, dati registrati ogni 2 secondi e polari). <strong>Dopo ogni uscita di prova, mandatecelo</strong>: è quello che ci serve per migliorare l'app.</li>
+  <li><strong>Importa</strong>: riapre un file esportato.</li>
+  <li><strong>Nuova sessione</strong>: azzera boe rilevate, arrivo, traccia, registro e taratura del vento; tiene il campo, i dati della barca e le polari.</li>
+  <li><strong>Registro</strong>: tutti gli eventi della giornata con l'ora (tarature, boe, allarmi, partenza, arrivo).</li>
+  <li><strong>Diagnostica GPS</strong>: una pagina che verifica il GPS del telefono e prepara un rapporto da copiare.</li>
+</ul>
+<p>Tutto si salva da solo sul telefono, anche se chiudi Chrome.</p>
+
+<h2 id="limiti">11. Limiti e avvertenze</h2>
+<ul>
+  <li><strong>Rotta e velocità sono sul fondo</strong>, non in acqua. Con la corrente differiscono dalla prua e dalla velocità sull'acqua: è normale.</li>
+  <li><strong>Il vento è stimato, non misurato.</strong> La qualità delle stime dipende dalla taratura e da una bolina ben condotta. Se qualcosa non torna, ritara.</li>
+  <li>La precisione del GPS del telefono è di pochi metri: le distanze molto piccole (ad esempio dalla linea negli ultimi secondi) vanno lette con prudenza.</li>
+  <li>A schermo spento o con Chrome in secondo piano il GPS si ferma. Tieni l'app aperta e il telefono in carica.</li>
+  <li>Verifica che le istruzioni di regata non vietino l'uso di dispositivi elettronici a bordo.</li>
+  <li>È un laboratorio: <strong>l'app non sostituisce l'osservazione dell'equipaggio</strong> né le regole di navigazione e di regata.</li>
+</ul>
+
+<h2 id="parole">12. Parole che trovi nell'app</h2>
+<table>
+  <tr><th>Parola</th><th>Significato</th></tr>
+  <tr><td>Rotta sul fondo</td><td>Direzione del movimento della barca rispetto al fondo, misurata dal GPS.</td></tr>
+  <tr><td>Velocità sul fondo</td><td>Velocità rispetto al fondo, in nodi.</td></tr>
+  <tr><td>VMC</td><td>Velocità con cui ti avvicini alla boa (velocità migliore verso la boa).</td></tr>
+  <tr><td>Buono / scarso</td><td>Salto di vento a favore (si può orzare) o contro (si deve poggiare) sulla mura attuale.</td></tr>
+  <tr><td>Lay-line</td><td>La rotta di bolina che porta esattamente alla boa: oltre non serve andare.</td></tr>
+  <tr><td>Angolo di virata</td><td>L'angolo tra le rotte di bolina stretta sulle due mure.</td></tr>
+  <tr><td>CdR, P</td><td>Barca del Comitato di Regata e boa di partenza: gli estremi della linea.</td></tr>
+  <tr><td>Boa virtuale</td><td>Punto sulla mappa usato come boa negli esercizi.</td></tr>
+  <tr><td>Polare</td><td>Velocità della barca a ogni angolo dal vento, per un'intensità del vento e una combinazione di vele.</td></tr>
+  <tr><td>Taratura</td><td>L'operazione con cui diciamo all'app da dove viene il vento.</td></tr>
+</table>
+
+<p class="piede">RR Regatta · laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.7.3. Domande, problemi e suggerimenti: scrivete a Marco.</p>
+</main>
+</body>
+</html>

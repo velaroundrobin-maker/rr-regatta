@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.7.2";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.7.3";
 
 export const MURE = ["dritta", "sinistra"];
 
@@ -170,7 +170,7 @@ export function bordoFavorevole(rilevamento, dir, off) {
   const c = rotteDiBolina(dir, off);
   const ad = Math.abs(delta(c.dritta, rilevamento)), as = Math.abs(delta(c.sinistra, rilevamento));
   const mura = ad <= as ? "dritta" : "sinistra", vantaggio = Math.abs(ad - as);
-  return {mura, vantaggio, testo: vantaggio < 2 ? "Bordi equivalenti" : "Favorite le mure a " + mura + " (" + Math.round(vantaggio) + "° più verso la boa)"};
+  return {mura, vantaggio, testo: vantaggio < 2 ? "Bordi equivalenti" : "Mure favorite: " + mura + " (" + Math.round(vantaggio) + "° più verso la boa)"};
 }
 
 // Distanza da percorrere sulla mura attuale prima di raggiungere la lay-line (dove si vira e si prende la boa).
