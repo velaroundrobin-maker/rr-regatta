@@ -318,3 +318,10 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
   .gira b{font-size:64px;display:block;color:var(--rosso)}
   .gira p{font-size:20px;font-weight:800;margin:8px 0 0}
 }
+
+/* ----- v0.9.1: Reset nell'intestazione ----- */
+.btn-reset{margin-left:auto;margin-right:6px;flex:none;height:38px;padding:0 10px;border-radius:9px;border:2px solid var(--rosso);background:transparent;font-size:14px;font-weight:900;letter-spacing:.5px}
+.btn-reset:not([hidden])~.btn-intero{margin-left:0}
+.btn-reset:not([hidden])~.stato-gps,.btn-intero:not([hidden])~.stato-gps{margin-left:0}
+.stato-gps{min-width:0;overflow:hidden}
+.stato-gps span{overflow:hidden;text-overflow:ellipsis}

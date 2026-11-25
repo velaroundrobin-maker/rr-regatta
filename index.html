@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="./app.css?v=0.9">
+<link rel="stylesheet" href="./app.css?v=0.9.1">
 <title>RR Regatta</title>
 </head>
 <body>
@@ -14,6 +14,7 @@
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
     <div class="titolo"><strong>RR Regatta</strong><small><span class="labs">Round Robin Labs™</span><span id="versione"></span></small></div>
+    <button type="button" class="btn-reset" id="btn-reset" hidden>Reset</button>
     <button type="button" class="btn-intero" id="btn-intero" aria-label="Schermo intero" hidden>⛶</button>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
@@ -50,7 +51,6 @@
     </section>
     <ol class="guida-passi" id="guida-passi"></ol>
     <button type="button" class="principale largo" id="guida-vai">Vai agli strumenti</button>
-    <button type="button" class="reset largo" id="guida-reset">Reset</button>
   </main>
 
   <!-- NAVIGAZIONE -->
@@ -154,7 +154,7 @@
             <button type="button" data-metti="CdR" aria-pressed="false">Comitato</button>
             <button type="button" data-metti="P" aria-pressed="false">Pin</button>
           </div>
-          <button type="button" id="disegno-togli" hidden>Togli</button>
+          <button type="button" id="disegno-togli" hidden>Cancella</button>
           <button type="button" id="disegno-annulla" aria-label="Annulla l'ultima modifica">↶</button>
           <button type="button" class="principale" id="disegno-fine">Fine</button>
         </div>
@@ -413,6 +413,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.9"></script>
+<script type="module" src="./js/app.mjs?v=0.9.1"></script>
 </body>
 </html>

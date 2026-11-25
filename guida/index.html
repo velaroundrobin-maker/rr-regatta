@@ -39,7 +39,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <body>
 <header>
   <img src="../round-robin-logo.png" alt="Logo Round Robin">
-  <div><strong>RR Regatta</strong><small>Round Robin Labs™ · guida alla versione 0.9</small></div>
+  <div><strong>RR Regatta</strong><small>Round Robin Labs™ · guida alla versione 0.9.1</small></div>
   <a href="../">Apri l'app</a>
 </header>
 <main>
@@ -110,7 +110,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <p>Entrando in una modalità lo schermo resta acceso da solo: a schermo spento il telefono smette di leggere il GPS e il timer non suona.</p>
 <p>Sulla mappa si apre un riquadro alla volta (andatura o timer): premendo un altro pulsante il riquadro aperto si chiude da solo.</p>
 <h3>Reset</h3>
-<p>In fondo alla pagina Preparazione c'è <b class="tasto">Reset</b>: cancella quello che hai preparato in quella modalità (vento, andatura, timer, boe segnate o disegnate, arrivo). Le polari registrate restano. In «File, registro e impostazioni» c'è il <b class="tasto">Reset generale</b>. Se sbagli, lì trovi <b class="tasto">Annulla l'ultimo reset</b>.</p>
+<p>In alto, in ogni schermata della modalità, c'è <b class="tasto">Reset</b>: cancella quello che hai preparato in quella modalità (vento, andatura, timer, boe segnate o disegnate, arrivo). Le polari registrate restano. In «File, registro e impostazioni» c'è il <b class="tasto">Reset generale</b>. Se sbagli, lì trovi <b class="tasto">Annulla l'ultimo reset</b>.</p>
 
 <h2 id="taratura">4. La taratura del vento</h2>
 <p>Il telefono non sa da dove viene il vento: glielo dobbiamo dire noi. Ci sono due modi.</p>
@@ -155,8 +155,8 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <tr><td>oltre 165°</td><td>Poppa</td></tr>
 </table>
 <h3>Conferma dell'andatura ogni 3 minuti</h3>
-<p>Quando la barca è in movimento (e non sei in bolina stretta), ogni 3 minuti in basso sulla mappa compare la domanda, per esempio «Andatura: traverso, mure a sinistra?». Se è giusta premi <b class="tasto">Giusta</b>; se il vento è girato premi <b class="tasto">Cambia</b> e dichiara l'andatura vera: il vento si aggiorna. L'intervallo (3, 5, 10 minuti o mai) si cambia in «File, registro e impostazioni».</p>
-<p>Sulla mappa (nord in alto) ci sono la barca, la freccia del vento e la scala. <strong>La freccia del vento indica dove va il vento</strong>; il numero accanto («VENTO 020°») è, come sempre in vela, la direzione da cui arriva. Con <b class="tasto">+</b> e <b class="tasto">−</b> ingrandisci, con <b class="tasto">Barca</b> la mappa torna a seguire la barca, con <b class="tasto">Tutto</b> inquadra barca e boe. Il pulsante <b class="tasto">Timer</b> apre timer di partenza e cronometro.</p>
+<p>Quando la barca è in movimento (e non sei in bolina stretta), ogni 3 minuti, e comunque appena l'andatura cambia (per esempio dopo un giro di boa), in basso sulla mappa compare la domanda, per esempio «Andatura: traverso, mure a sinistra?». Se è giusta premi <b class="tasto">Giusta</b> (se è «bolina stretta», partono le stime dei salti); se il vento è girato premi <b class="tasto">Cambia</b> e dichiara l'andatura vera: il vento si aggiorna. L'intervallo (3, 5, 10 minuti o mai) si cambia in «File, registro e impostazioni».</p>
+<p>Sulla mappa (nord in alto, con gradi e punti cardinali sui bordi) ci sono la barca, sempre al centro, la freccia del vento e la scala. <strong>La freccia del vento indica dove va il vento</strong>; il numero accanto («VENTO 020°») è la direzione da cui arriva. Con <b class="tasto">+</b> e <b class="tasto">−</b> ingrandisci; <b class="tasto">Timer</b> apre timer di partenza e cronometro. In Allenamento e Regata ci sono anche <b class="tasto">Tutto</b> (inquadra barca e boe), <b class="tasto">Barca</b> (torna a seguire la barca) e <b class="tasto">Disegna</b>.</p>
 
 <h2 id="allenamento">6. Allenamento</h2>
 <p>Serve per gli esercizi in acqua, anche senza boe vere. La preparazione propone:</p>
@@ -180,10 +180,11 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <p>Premi <b class="tasto">Disegna</b> sulla mappa (oppure «Le disegno io» nella preparazione): compare una barra in basso. Si disegna con il dito o con la pennina, anche <strong>prima di uscire, senza GPS</strong>: la mappa parte dall'ultima posizione nota. Se c'è già un campo di regata, l'app chiede se disegnarne uno nuovo o aggiungere boe a quello esistente.</p>
 <ul>
   <li>scegli <b class="tasto">Comitato</b>, <b class="tasto">Pin</b> o <b class="tasto">Boa</b> e tocca la mappa nel punto voluto: messa la barca comitato, l'app passa da sola al pin;</li>
-  <li>trascina una boa per spostarla; toccala per sceglierla e poi premi <b class="tasto">Togli</b> per eliminarla;</li>
+  <li>trascina una boa per spostarla; toccala per sceglierla e poi premi <b class="tasto">Cancella</b>;</li>
   <li><b class="tasto">↶</b> annulla l'ultima modifica, <b class="tasto">Fine</b> (o di nuovo <b class="tasto">Disegna</b>) chiude il disegno.</li>
 </ul>
 <p>Sulla mappa ogni boa è un punto rosso con un anello: l'anello è rosso per la prossima boa. La barca comitato è disegnata come una piccola barca bianca con la prua al vento. Accanto al nome, «~» indica una posizione stimata e «(IdR)» una posizione presa dalle istruzioni di regata. Il percorso si aggiorna da solo: una boa nuova si aggiunge prima dell'arrivo.</p>
+<p>Anche senza premere «Disegna», <strong>toccando una boa sulla mappa la selezioni</strong>: poi la trascini per spostarla o premi <b class="tasto">Cancella</b>. Nei campi di regata «Cancella» toglie solo la posizione: la boa resta nel percorso.</p>
 <p>La mappa non ha ancora la carta nautica sotto: le boe disegnate prima di uscire vanno messe a occhio rispetto alla posizione nota; meglio ritoccarle in acqua.</p>
 <p>Durante l'esercizio lo schermo Strumenti funziona come in regata: striscia «Verso» con la boa successiva, distanza, rilevamento e VMC, pulsante <b class="tasto">Boa passata</b>.</p>
 
@@ -290,7 +291,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <tr><td>Taratura</td><td>L'operazione con cui diciamo all'app da dove viene il vento.</td></tr>
 </table>
 
-<p class="piede">RR Regatta · Round Robin Labs™, laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.9. Domande, problemi e suggerimenti: scrivete a Marco.</p>
+<p class="piede">RR Regatta · Round Robin Labs™, laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.9.1. Domande, problemi e suggerimenti: scrivete a Marco.</p>
 </main>
 </body>
 </html>

@@ -4,6 +4,16 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.9.1
+
+- Reset nell'intestazione, in ogni schermata delle modalità.
+- Tocco su una boa: selezione, spostamento trascinando, Cancella (nei campi di regata cancella solo la posizione).
+- Preparazione senza i passi GPS e schermo (il GPS compare solo se c'è un problema).
+- Navigazione: mappa sempre centrata sulla barca, senza «Barca» e «Tutto».
+- Bussola sui bordi della mappa: tacche ogni 10°, gradi ogni 30°, N E S O.
+- Richiesta dell'andatura anche appena l'andatura cambia (20 s); «Giusta» su bolina stretta avvia le stime; niente richieste durante la partenza.
+- Dichiarazione dell'andatura con rotta stabile entro ±15° (bolina stretta ±8°); selezione di una boa col tocco chiusa da sola dopo 20 s; audio del timer riattivato prima di ogni beep.
+
 ## Versione 0.9 — reset, schermo intero, solo verticale
 
 - Reset in fondo alla Preparazione di ogni modalità e Reset generale nelle impostazioni, con «Annulla l'ultimo reset» (copia salvata prima di ogni reset).

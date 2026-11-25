@@ -1,17 +1,17 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.9";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.9";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.9";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.9.1";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.9.1";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.9.1";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.9";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.9";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.9";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.9.1";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.9.1";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.9.1";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.9";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.9.1";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.9";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.9.1";
 
-const VERSIONE = "0.9";
+const VERSIONE = "0.9.1";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -186,9 +186,9 @@ function segnale() {
   } catch {}
 }
 
-function rottaPerTaratura() {
+function rottaPerTaratura(maxDispersione = 8) {
   if (!fixVivo()) { avvisa("Serve il GPS attivo con una posizione recente."); return null; }
-  const r = rottaStabile(st.fixes, Date.now(), {finestraMs: 10000, maxDispersione: 8});
+  const r = rottaStabile(st.fixes, Date.now(), {finestraMs: 10000, maxDispersione});
   if (r.cog === null) { avvisa("Rotta non ancora utilizzabile (" + r.motivo + "): tieni la rotta costante, sopra 1,5 nodi, per una decina di secondi e riprova."); return null; }
   return r.cog;
 }
@@ -391,6 +391,7 @@ function suono(tipo) {
   try { navigator.vibrate?.(tipo === "partenza" ? [150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150, 80, 150] : tipo === "lungo" ? [1000] : [80]); } catch {}
   const a = st.audio; if (!a) return;
   try {
+    if (a.state === "suspended") a.resume(); // dopo uno schermo spento il browser sospende l'audio
     const t0 = a.currentTime + 0.02;
     const bip = (t, durata, freq) => {
       const o = a.createOscillator(), g = a.createGain();
@@ -415,6 +416,8 @@ function tickTimer() {
   if (st.vista === "vista-nav") disegnaCrono(adesso);
   if (adesso - (st.ultimoControllo || 0) < 1000) return; // una volta al secondo basta
   st.ultimoControllo = adesso;
+  // La selezione di una boa con un tocco si chiude da sola dopo 20 secondi: in regata non si sposta una boa per sbaglio.
+  if (st.disegno?.daTocco && adesso - st.disegno.ultimoTocco > 20000) { st.disegno = null; st.selezionata = null; disegnaBarra(); salvaPresto(); aggiorna(); }
   controllaRichiesta(adesso);
   if (st.andaturaAperta && st.vista === "vista-nav") disegnaAndatura();
 }
@@ -538,7 +541,7 @@ function disegnaBarra() {
   if (!st.disegno) return;
   document.querySelectorAll("[data-metti]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.metti === st.disegno.metti)));
   const t = $("disegno-togli");
-  t.hidden = !st.selezionata; t.textContent = "Togli " + (st.selezionata || "");
+  t.hidden = !st.selezionata; t.textContent = "Cancella " + (st.selezionata === "P" ? "pin" : st.selezionata === "CdR" ? "comitato" : st.selezionata || "");
   $("disegno-annulla").disabled = !st.annullaDisegno.length;
   $("disegno-aiuto").textContent = st.disegno.metti === "boa" ? "Tocca la mappa per mettere una boa. Trascina una boa per spostarla; toccala per sceglierla."
     : "Tocca la mappa dove mettere " + (st.disegno.metti === "CdR" ? "la barca comitato (estremo destro della linea, guardando il vento)." : "il pin (estremo sinistro della linea, guardando il vento).");
@@ -582,9 +585,25 @@ function annullaDisegno() {
 }
 function togliSelezionata() {
   const i = s.boe.findIndex(b => b.codice === st.selezionata); if (i < 0) return;
+  const codice = s.boe[i].codice;
+  // Nei campi di regata la boa fa parte del percorso: si cancella solo la sua posizione.
+  if (s.campo.modello !== "allenamento" && tappe(s.campo.sequenza).some(t => t.codice?.toUpperCase() === codice.toUpperCase())) {
+    st.annullaDisegno.push({tipo: "sposta", codice, pos: s.boe[i].pos ? {...s.boe[i].pos} : null, sequenza: s.campo.sequenza});
+    s.boe[i].pos = null; st.selezionata = null;
+    dopoDisegno("cancellata la posizione di " + codice, {sequenza: s.campo.sequenza});
+    return;
+  }
   st.annullaDisegno.push({tipo: "togli", boa: s.boe[i], indice: i, sequenza: s.campo.sequenza});
-  const codice = s.boe[i].codice; s.boe.splice(i, 1); st.selezionata = null;
-  dopoDisegno("tolta " + codice, {tolta: codice});
+  s.boe.splice(i, 1); st.selezionata = null;
+  dopoDisegno("cancellata " + codice, {tolta: codice});
+}
+// Tocco su una boa fuori dal disegno: si seleziona e si apre la barra per spostarla o cancellarla.
+function selezionaBoa(codice) {
+  st.disegno = {metti: "boa", daTocco: true, ultimoTocco: Date.now()}; st.selezionata = codice; st.segui = false; st.annullaDisegno = [];
+  st.cronoAperto = false; st.andaturaAperta = false; disegnaCrono(); disegnaAndatura();
+  disegnaBarra(); aggiorna();
+  const b = trovaBoa(s.boe, codice);
+  avvisa((codice === "CdR" ? "Barca comitato" : codice === "P" ? "Pin" : "Boa " + codice) + " selezionata: trascinala per spostarla, «Cancella» per toglierla, «Fine» per chiudere.");
 }
 function fineDisegno() {
   st.disegno = null; st.selezionata = null; disegnaBarra();
@@ -632,6 +651,7 @@ const SCHEDE = {
   polari: [["vista-nav", "Strumenti"], ["vista-guida", "Preparazione"], ["vista-polari", "Polari"]]
 };
 function disegnaSchede() {
+  $("btn-reset").hidden = !st.modo;
   const nav = $("schede"), voci = st.modo ? [...SCHEDE[st.modo], ["menu", "Menu"]] : st.vista === "vista-altro" ? [["menu", "Menu"]] : [];
   nav.hidden = !voci.length;
   nav.style.setProperty("--n", String(voci.length || 1));
@@ -656,7 +676,9 @@ function disegnaHome() {
 }
 
 // Passi della preparazione: titolo, spiegazione, stato, fatto sì/no, pulsanti [azione, testo, principale?].
-const passoGps = () => ({titolo: "GPS", testo: "Si accende da solo.",
+// Il GPS compare tra i passi solo se c'è un problema (spento o permesso negato).
+const passiGps = () => gpsAttivo() && st.fase !== "errore" ? [] : [passoGps()];
+const passoGps = () => ({titolo: "GPS", testo: "Il GPS non è attivo.",
   fatto: fixVivo(), stato: fixVivo() ? "Posizione ricevuta." : gpsAttivo() ? "Ricerca della posizione…" : st.problema || "GPS spento.",
   azioni: gpsAttivo() ? [] : [["gps", "Accendi il GPS", true]]});
 const passoSchermo = () => ({titolo: "Schermo sempre acceso", testo: "Resta acceso da solo. Tieni il telefono in carica.",
@@ -673,11 +695,11 @@ const passoTimer = testo => ({titolo: "Timer di partenza", facoltativo: true, te
   azioni: [["timer", "Apri il timer", true]]});
 function primaBoa() { const t = tappe(s.campo.sequenza).find(x => x.tipo === "boa"); return t ? trovaBoa(s.boe, t.codice) : null; }
 function passiModo(m) {
-  if (m === "navigazione") return [passoGps(), passoSchermo(),
+  if (m === "navigazione") return [...passiGps(),
     passoVento("Serve per vento e andatura.")];
   if (m === "allenamento") {
     const campo = s.campo.modello === "allenamento" && s.boe.some(b => b.pos);
-    return [passoGps(), passoSchermo(),
+    return [...passiGps(),
       passoVento("Orienta le boe sul vento."),
       {titolo: "Boe", facoltativo: true, testo: "Campi pronti intorno alla barca, orientati sul vento (linea 100 m, bolina 400 m), oppure disegnati.",
         fatto: campo, stato: campo ? s.campo.nome + " · " + s.campo.sequenza : "Nessun campo d'allenamento.",
@@ -687,7 +709,7 @@ function passiModo(m) {
   if (m === "regata") {
     const lp = lineaPartenza(s.boe), b = primaBoa();
     const cdr = trovaBoa(s.boe, "CdR")?.pos?.fonte === "gps", p = trovaBoa(s.boe, "P")?.pos?.fonte === "gps";
-    return [passoGps(), passoSchermo(),
+    return [...passiGps(),
       {titolo: "Percorso", testo: "Dalle istruzioni di regata o disegnato.",
         fatto: true, stato: s.campo.nome + " · " + s.campo.sequenza, azioni: [["vai:vista-regata:configura", "Scegli il percorso"], ["disegna", "Disegna sulla mappa"]]},
       {titolo: "Linea di partenza", testo: "Passa vicino a comitato e pin e segnali, oppure disegnali.",
@@ -701,7 +723,7 @@ function passiModo(m) {
   if (m === "polari") {
     const t = tar(), lim = pol.imp.validitaMin * 60000, adesso = Date.now();
     const dirOk = t.dir !== null && t.fonte !== "andatura" && (!t.t || adesso - t.t <= lim), twsOk = pol.vento && adesso - pol.vento.t <= lim;
-    return [passoGps(), passoSchermo(),
+    return [...passiGps(),
       {...passoVento("Ritarala almeno ogni " + pol.imp.validitaMin + " minuti.", false), fatto: dirOk},
       {titolo: "Intensità del vento", testo: "A barca ferma, dall'anemometro di coperta.",
         fatto: !!twsOk, stato: pol.vento ? numero(pol.vento.tws, 1) + " nodi, " + etaTesto(adesso - pol.vento.t) + (twsOk ? "." : ": da aggiornare.") : "Non inserita.",
@@ -802,7 +824,8 @@ function disegnaAndatura() {
     ANDATURE.map(n => ["sinistra", "dritta"].map(m => '<button type="button" data-andatura="' + n + '|' + m + '"' + (att && att.nome === n && att.mura === m ? ' class="attuale"' : "") + ">" + n + "</button>").join("")).join(""));
 }
 function dichiaraAndatura(nome, mura) {
-  const c = rottaPerTaratura(); if (c === null) return;
+  // Le andature sono larghe una trentina di gradi: basta una rotta stabile entro ±15° (con l'onda la rotta GPS balla).
+  const c = rottaPerTaratura(nome === "Bolina stretta" ? 8 : 15); if (c === null) return;
   const adesso = Date.now(), t = tar(), sv = statoVento(adesso);
   const angoloBolina = Number.isFinite(t.off?.[mura]) ? Math.abs(t.off[mura]) : (s.barca.angoloVirata || 90) / 2;
   const nuovo = ventoDaAndatura(c, nome, mura, angoloBolina);
@@ -825,11 +848,17 @@ function controllaRichiesta(adesso) {
   const r = $("richiesta-andatura"), min = s.vento.imp.promemoriaMin || 0;
   const nav = smoothNav(st.fixes);
   const possibile = st.vista === "vista-nav" && ["navigazione", "allenamento", "regata"].includes(st.modo) && min > 0 && fixVivo() &&
-    nav.sog !== null && nav.sog >= 1.5 && !s.vento.bolina && !st.disegno && !st.andaturaAperta && !st.cronoAperto;
+    nav.sog !== null && nav.sog >= 1.5 && !s.vento.bolina && !st.disegno && !st.andaturaAperta && !st.cronoAperto &&
+    !(Number.isFinite(s.timer.zero) && adesso > s.timer.zero - 6 * 60000 && adesso < s.timer.zero + 2 * 60000); // niente richieste durante la partenza
   if (!possibile) { if (!st.andaturaAperta) r.hidden = true; return; }
   if (!st.ultimaRichiesta) st.ultimaRichiesta = adesso;
-  if (r.hidden && adesso - st.ultimaRichiesta < min * 60000) return;
   const sv = statoVento(adesso), W = Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir, a = Number.isFinite(W) && nav.cog !== null ? andatura(nav.cog, W) : null;
+  // Cambio di andatura (giro di boa, poggiata, orzata) stabile da 20 secondi: si chiede subito, senza aspettare i minuti.
+  const chiave = a ? a.nome + "|" + a.mura : "";
+  if (!st.andaturaCalcolata || st.andaturaCalcolata.chiave !== chiave) st.andaturaCalcolata = {chiave, da: adesso};
+  const ultima = s.vento.andatura ? s.vento.andatura.nome + "|" + s.vento.andatura.mura : null;
+  const cambiata = a && ultima && chiave !== ultima && adesso - st.andaturaCalcolata.da >= 20000;
+  if (r.hidden && !cambiata && adesso - st.ultimaRichiesta < min * 60000) return;
   if (r.hidden) { try { navigator.vibrate?.([120]); } catch {} }
   r.hidden = false;
   r.dataset.andatura = a ? a.nome + "|" + a.mura : "";
@@ -1149,6 +1178,8 @@ function disegnaNav() {
   ba.hidden = !attivo || modo === "polari" || !modo; ba.setAttribute("aria-pressed", String(!!s.vento.bolina));
   ba.textContent = s.vento.bolina ? "BOLINA STRETTA ✓" : s.vento.andatura ? "Andatura: " + s.vento.andatura.nome.toLowerCase() : "Andatura";
   $("btn-disegna-mappa").hidden = !corsa;
+  $("segui").hidden = !corsa; $("tutto").hidden = !corsa;
+  if (!corsa && !st.disegno) st.segui = true; // senza carta sotto, fuori da campo la mappa segue sempre la barca
   $("btn-disegna-mappa").classList.toggle("attivo", !!st.disegno);
   $("btn-traguardo").hidden = !(corsa && ob.tappa?.tipo === "arrivo" && !s.arrivo.taglio && attivo);
   $("btn-passata").hidden = !(corsa && inRegata && ob.tappa.tipo !== "arrivo");
@@ -1259,8 +1290,20 @@ function disegnaCarta(nav, vivo, ob, vento = {}) {
     if (vivo && nav.cog !== null) out += '<g transform="translate(' + f1(b.x) + " " + f1(b.y) + ") rotate(" + f1(nav.cog) + ')"><path d="M0 -20 L12 14 L0 7 L-12 14Z" fill="' + colore + '" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></g>';
     else out += '<circle cx="' + f1(b.x) + '" cy="' + f1(b.y) + '" r="10" fill="' + colore + '" stroke="#fff" stroke-width="3"/>';
   }
-  out += '<g transform="translate(20 ' + (H - 56) + ')"><path d="M0 -14 L7 6 L0 2 L-7 6Z" fill="#fff"/><text x="0" y="22" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">N</text></g>';
-  const sx = 42, sy = H - 16;
+  // Bussola sui bordi: tacche ogni 10°, gradi ogni 30°, punti cardinali (nord in alto).
+  const bordo = gr => {
+    const dx = Math.sin(rad(gr)), dy = -Math.cos(rad(gr));
+    const t = Math.min(dx ? (dx > 0 ? W / 2 : -W / 2) / dx : Infinity, dy ? (dy > 0 ? H / 2 : -H / 2) / dy : Infinity);
+    return {x: W / 2 + dx * t, y: H / 2 + dy * t, dx, dy};
+  };
+  for (let gr = 0; gr < 360; gr += 10) {
+    const b = bordo(gr), L = gr % 30 ? 6 : 12;
+    out += '<path d="M' + f1(b.x) + " " + f1(b.y) + "L" + f1(b.x - b.dx * L) + " " + f1(b.y - b.dy * L) + '" stroke="#fff" stroke-opacity=".7" stroke-width="' + (gr % 90 ? 1.5 : 3) + '"/>';
+    if (gr % 30) continue;
+    const cardinale = {0: "N", 90: "E", 180: "S", 270: "O"}[gr], q = 22;
+    out += '<text x="' + f1(b.x - b.dx * q) + '" y="' + f1(b.y - b.dy * q + 4) + '" fill="' + (cardinale ? "#fff" : "#b5b5b5") + '" font-size="' + (cardinale ? 15 : 11) + '" font-weight="800" text-anchor="middle">' + (cardinale || String(gr).padStart(3, "0")) + "</text>";
+  }
+  const sx = 42, sy = H - 42; // sopra le tacche della bussola
   out += '<path d="M' + sx + " " + (sy - 6) + "v6h" + f1(sc.pixel) + 'v-6" fill="none" stroke="#fff" stroke-width="2"/><text x="' + f1(sx + sc.pixel / 2) + '" y="' + (sy - 10) + '" fill="#fff" font-size="13" font-weight="700" text-anchor="middle">' + sc.etichetta + "</text>";
   svg.innerHTML = out;
 }
@@ -1290,8 +1333,11 @@ const carta = $("carta"), puntatori = new Map();
 const puntoSvg = e => { const r = carta.getBoundingClientRect(); return {x: e.clientX - r.left, y: e.clientY - r.top}; };
 carta.addEventListener("pointerdown", e => {
   carta.setPointerCapture(e.pointerId); const p = puntoSvg(e);
+  if (st.disegno?.daTocco) st.disegno.ultimoTocco = Date.now();
   puntatori.set(e.pointerId, p); carta.classList.add("trascina");
+  const campoVisibile = st.modo === "allenamento" || st.modo === "regata";
   if (st.disegno && puntatori.size === 1) { st.tocco = {x: p.x, y: p.y, t: Date.now(), mosso: 0}; const b = boaVicina(p); st.trascina = b ? {codice: b.codice, prima: {...b.pos}, mossa: false} : null; }
+  else if (campoVisibile && puntatori.size === 1) { const b = boaVicina(p); st.tocco = b ? {x: p.x, y: p.y, t: Date.now(), mosso: 0, candidata: b.codice} : null; st.trascina = null; }
   else { st.tocco = null; st.trascina = null; }
 });
 carta.addEventListener("pointermove", e => {
@@ -1322,6 +1368,7 @@ carta.addEventListener("pointermove", e => {
 const rilascia = e => {
   const p = puntatori.get(e.pointerId);
   puntatori.delete(e.pointerId); if (!puntatori.size) carta.classList.remove("trascina");
+  if (!st.disegno && st.tocco?.candidata && p && e.type !== "pointercancel" && st.tocco.mosso < 8 && Date.now() - st.tocco.t < 800) { const c = st.tocco.candidata; st.tocco = null; selezionaBoa(c); return; }
   if (!st.disegno || e.type === "pointercancel") { st.tocco = null; st.trascina = null; return; }
   if (st.trascina?.mossa) { st.annullaDisegno.push({tipo: "sposta", codice: st.trascina.codice, pos: st.trascina.prima, sequenza: s.campo.sequenza}); dopoDisegno("Spostata " + st.trascina.codice); }
   else if (st.tocco && p && st.tocco.mosso < 8 && Date.now() - st.tocco.t < 800) {
@@ -1574,7 +1621,7 @@ $("btn-nuova").addEventListener("click", () => {
   evento("Reset generale · " + campo.nome); avvisa("Reset fatto."); modificato();
 });
 $("btn-annulla-reset").addEventListener("click", annullaReset);
-$("guida-reset").addEventListener("click", () => { if (st.modo) resetModo(st.modo); });
+$("btn-reset").addEventListener("click", () => { if (st.modo) resetModo(st.modo); });
 $("btn-intero").addEventListener("click", () => schermoIntero(true));
 $("imp-intero").addEventListener("click", () => { s.preferenze.schermoIntero = !s.preferenze.schermoIntero; schermoIntero(s.preferenze.schermoIntero); salvaPresto(); });
 
@@ -1586,7 +1633,11 @@ $("griglia-andature").addEventListener("click", e => { const b = e.target.closes
 $("richiesta-giusta").addEventListener("click", () => {
   const [n, m] = ($("richiesta-andatura").dataset.andatura || "|").split("|");
   st.ultimaRichiesta = Date.now(); $("richiesta-andatura").hidden = true;
-  if (n) { s.vento.andatura = {nome: n, mura: m, t: Date.now()}; evento("Andatura confermata: " + n.toLowerCase() + ", mure a " + m); salvaPresto(); }
+  if (n) {
+    s.vento.andatura = {nome: n, mura: m, t: Date.now()};
+    if (n === "Bolina stretta") { s.vento.bolina = true; st.poggiataDa = null; avvisa("Bolina stretta: l'app stima i salti di vento."); }
+    evento("Andatura confermata: " + n.toLowerCase() + ", mure a " + m); salvaPresto();
+  }
   aggiorna();
 });
 $("richiesta-cambia").addEventListener("click", apriAndatura);
@@ -1689,6 +1740,7 @@ document.querySelectorAll("[data-metti]").forEach(b => b.addEventListener("click
 $("disegno-annulla").addEventListener("click", annullaDisegno);
 $("disegno-togli").addEventListener("click", togliSelezionata);
 $("disegno-fine").addEventListener("click", fineDisegno);
+$("disegno-barra").addEventListener("pointerdown", () => { if (st.disegno?.daTocco) st.disegno.ultimoTocco = Date.now(); });
 $("all-tipo").addEventListener("click", e => { const b = e.target.closest("[data-tipo]"); if (b) { st.tipoAllenamento = b.dataset.tipo; disegnaAllenamento(); } });
 $("allenamento").addEventListener("toggle", () => { if ($("allenamento").open) { $("all-vento").value = ""; disegnaAllenamento(); } });
 $("all-crea").addEventListener("click", creaAllenamento);
