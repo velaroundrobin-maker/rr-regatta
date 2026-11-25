@@ -4,6 +4,15 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.3 — campo di regata
+
+- Tre schede: Navigazione, Campo, Altro.
+- Modelli dalle istruzioni di regata: Loano (bastone 1 e 2 giri, costiere 3, 4, 5) e Alassio 2026 (percorsi 1, 2, 3 per entrambi i raggruppamenti), più campo personalizzato. Le coordinate delle boe 4 e 5 di Loano vengono dalle istruzioni e sono marcate come indicative.
+- Striscia «Verso»: prossima tappa con rilevamento, distanza e VMC. Pulsanti «Segna GPS», «Rileva» e «Boa passata»; all'ultima tappa «Taglia il traguardo» (annullabile).
+- Rilevamento angolare rispetto alla rotta GPS; con due rilevamenti da punti diversi la boa viene triangolata. Un solo rilevamento dà solo la direzione, valida entro 200 m dal punto d'osservazione.
+- Cancello (G) e arrivo puntano al centro della linea quando i due estremi sono noti; linea di partenza in rosso, d'arrivo in bianco.
+- Salvataggio automatico sul telefono, esportazione e importazione del file della sessione, registro degli eventi.
+
 ## Versione 0.2 — schermata di navigazione
 
 - Rotta (COG) e velocità (SOG) in caratteri grandi, media degli ultimi 3 secondi. Se il telefono non le fornisce, sono calcolate dagli spostamenti degli ultimi secondi; la nota sotto il valore dice da dove arrivano.
@@ -21,4 +30,6 @@ Nessun dato viene inviato a server esterni.
 - `js/engine.mjs` — geometria (rilevamenti, distanze, media circolare, VMG/VMC)
 - `js/gps.mjs` — validazione dei punti del browser
 - `js/nav.mjs` — smorzamento, moto calcolato, formati italiani
+- `js/campo.mjs` — modelli di campo, sequenza, obiettivo della tappa, triangolazione
+- `js/stato.mjs` — sessione, cambio modello, salvataggio e verifica dei file
 - `test/` — `node --test test/*.test.mjs`

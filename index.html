@@ -5,56 +5,157 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.2">
+<link rel="stylesheet" href="./app.css?v=0.3">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.2</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.3</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
-  <section class="strumenti" aria-label="Strumenti di navigazione">
-    <div class="strumento" id="cella-cog">
-      <span class="etichetta">ROTTA <small>COG</small></span>
-      <output class="valore" id="cog">—</output>
-      <span class="nota" id="nota-cog">GPS fermo</span>
-    </div>
-    <div class="strumento" id="cella-sog">
-      <span class="etichetta">VELOCITÀ <small>SOG</small></span>
-      <output class="valore"><span id="sog">—</span><small> kn</small></output>
-      <span class="nota" id="nota-sog">GPS fermo</span>
-    </div>
-  </section>
+  <!-- NAVIGAZIONE -->
+  <main class="vista vista-nav" id="vista-nav">
+    <section class="strumenti" aria-label="Strumenti di navigazione">
+      <div class="strumento" id="cella-cog">
+        <span class="etichetta">ROTTA <small>COG</small></span>
+        <output class="valore" id="cog">—</output>
+        <span class="nota" id="nota-cog">GPS fermo</span>
+      </div>
+      <div class="strumento" id="cella-sog">
+        <span class="etichetta">VELOCITÀ <small>SOG</small></span>
+        <output class="valore"><span id="sog">—</span><small> kn</small></output>
+        <span class="nota" id="nota-sog">GPS fermo</span>
+      </div>
+    </section>
 
-  <section class="mappa" id="mappa" aria-label="Mappa della posizione, nord in alto">
-    <svg id="carta" role="img" aria-label="Posizione della barca"></svg>
-    <div class="mappa-messaggio" id="mappa-messaggio">
-      <strong id="messaggio-titolo">Premi «Avvia GPS»</strong>
-      <span id="messaggio-testo">La posizione della barca comparirà qui.</span>
-    </div>
-    <div class="riquadro-pos" id="riquadro-pos" hidden>
-      <span id="lat">—</span><span id="lon">—</span><small id="precisione">—</small>
-    </div>
-    <div class="comandi-mappa">
-      <button type="button" id="zoom-piu" aria-label="Ingrandisci">+</button>
-      <button type="button" id="zoom-meno" aria-label="Riduci">−</button>
-      <button type="button" id="segui" class="testo" aria-label="Centra sulla barca e seguila">Barca</button>
-    </div>
-  </section>
+    <section class="prossima" aria-label="Prossima boa">
+      <div class="prossima-testa">
+        <span class="verso">VERSO</span><strong class="codice" id="pr-codice">—</strong>
+        <span class="pr-nome" id="pr-nome">—</span>
+        <button type="button" class="piccolo" id="pr-rileva">Rileva</button>
+        <button type="button" class="piccolo" id="pr-segna">Segna GPS</button>
+      </div>
+      <div class="prossima-dati">
+        <div><span>RILEVAMENTO</span><b id="pr-rlv">—</b></div>
+        <div><span>DISTANZA</span><b id="pr-dist">—</b></div>
+        <div><span>VMC</span><b id="pr-vmc">—</b></div>
+      </div>
+      <small class="pr-nota" id="pr-nota">—</small>
+    </section>
 
-  <footer class="barra">
-    <button type="button" class="principale" id="btn-gps">Avvia GPS</button>
-    <div class="opzioni">
-      <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo acceso: no</button>
-      <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia: no</button>
-      <a class="collegamento" href="./diagnostica/">Diagnostica</a>
-    </div>
-  </footer>
+    <section class="mappa" id="mappa" aria-label="Mappa: nord in alto">
+      <svg id="carta" role="img" aria-label="Posizione della barca e delle boe"></svg>
+      <div class="mappa-messaggio" id="mappa-messaggio">
+        <strong id="messaggio-titolo">Premi «Avvia GPS»</strong>
+        <span id="messaggio-testo">La posizione della barca comparirà qui.</span>
+      </div>
+      <div class="riquadro-pos" id="riquadro-pos" hidden><span id="lat">—</span><span id="lon">—</span><small id="precisione">—</small></div>
+      <div class="comandi-mappa">
+        <button type="button" id="zoom-piu" aria-label="Ingrandisci">+</button>
+        <button type="button" id="zoom-meno" aria-label="Riduci">−</button>
+        <button type="button" id="tutto" class="testo" aria-label="Inquadra barca e boe">Tutto</button>
+        <button type="button" id="segui" class="testo" aria-label="Centra sulla barca e seguila">Barca</button>
+      </div>
+    </section>
+
+    <section class="azioni">
+      <button type="button" class="principale" id="btn-gps">Avvia GPS</button>
+      <button type="button" class="secondario" id="btn-passata">Boa passata ›</button>
+      <button type="button" class="principale" id="btn-traguardo" hidden>Taglia il traguardo</button>
+    </section>
+  </main>
+
+  <!-- CAMPO -->
+  <main class="vista scorre" id="vista-campo" hidden>
+    <section class="blocco" id="blocco-rilievo" hidden>
+      <h2>RILEVAMENTO · BOA <span id="ril-codice">—</span></h2>
+      <p class="aiuto">Guarda la boa e stima di quanti gradi si trova a sinistra o a dritta della prua. La rotta GPS sostituisce la prua: con corrente o scarroccio c'è un piccolo errore.</p>
+      <div class="segmento" role="group" aria-label="Lato">
+        <button type="button" data-lato="-1" aria-pressed="true">A sinistra</button>
+        <button type="button" data-lato="1" aria-pressed="false">A dritta</button>
+      </div>
+      <div class="gradi" id="ril-gradi"></div>
+      <label class="campo-num">Gradi <input id="ril-angolo" type="number" inputmode="numeric" min="0" max="180" value="20"></label>
+      <p class="anteprima" id="ril-anteprima">—</p>
+      <div class="riga-pulsanti"><button type="button" class="principale" id="ril-registra">Registra rilevamento</button><button type="button" class="secondario" id="ril-chiudi">Chiudi</button></div>
+    </section>
+
+    <section class="blocco">
+      <h2>PERCORSO</h2>
+      <p class="aiuto" id="campo-titolo">—</p>
+      <ol class="tappe" id="lista-tappe"></ol>
+      <p class="aiuto">Tocca una tappa per farla diventare la prossima.</p>
+    </section>
+
+    <section class="blocco">
+      <h2>BOE</h2>
+      <div class="boe" id="lista-boe"></div>
+      <details class="aggiungi">
+        <summary>Aggiungi una boa</summary>
+        <div class="riga-campi"><label>Codice <input id="nuova-codice" maxlength="6"></label><label>Nome <input id="nuova-nome" maxlength="40"></label></div>
+        <button type="button" class="secondario" id="nuova-aggiungi">Aggiungi</button>
+      </details>
+    </section>
+
+    <section class="blocco">
+      <h2>ARRIVO</h2>
+      <div id="arrivo-estremi"></div>
+      <button type="button" class="principale largo" id="btn-traguardo-2">Taglia il traguardo</button>
+      <p class="aiuto" id="arrivo-esito">—</p>
+      <button type="button" class="collegamento-testo" id="annulla-arrivo" hidden>Annulla l'arrivo registrato</button>
+    </section>
+
+    <section class="blocco">
+      <details class="configura" id="configura">
+        <summary>Cambia campo di regata</summary>
+        <label>Nome della regata <input id="cfg-nome" maxlength="80"></label>
+        <label>Modello <select id="cfg-modello"></select></label>
+        <label>Sequenza <input id="cfg-sequenza" autocapitalize="characters"></label>
+        <p class="aiuto" id="cfg-note">—</p>
+        <button type="button" class="principale largo" id="cfg-applica">Applica</button>
+      </details>
+    </section>
+  </main>
+
+  <!-- ALTRO -->
+  <main class="vista scorre" id="vista-altro" hidden>
+    <section class="blocco">
+      <h2>SCHERMO E MAPPA</h2>
+      <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
+      <p class="aiuto">A schermo spento il browser smette di ricevere il GPS: in regata tienilo acceso.</p>
+      <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia sulla mappa: no</button>
+    </section>
+    <section class="blocco">
+      <h2>SESSIONE</h2>
+      <p class="aiuto">Tutto viene salvato da solo su questo telefono. Esporta un file per conservarlo o spostarlo su un altro dispositivo.</p>
+      <div class="riga-pulsanti">
+        <button type="button" class="secondario" id="btn-esporta">Esporta</button>
+        <button type="button" class="secondario" id="btn-importa">Importa</button>
+        <input type="file" id="file-importa" accept=".json,application/json" hidden>
+      </div>
+      <button type="button" class="secondario largo" id="btn-nuova">Nuova sessione</button>
+    </section>
+    <section class="blocco">
+      <h2>REGISTRO</h2>
+      <ol class="registro" id="registro"></ol>
+    </section>
+    <section class="blocco">
+      <a class="secondario largo" href="./diagnostica/">Diagnostica GPS</a>
+      <p class="aiuto">Laboratorio sperimentale di Round Robin A.S.D. Le stime non sostituiscono osservazione e decisioni dell'equipaggio. Nessun dato lascia il telefono.</p>
+    </section>
+  </main>
+
+  <nav class="schede" aria-label="Sezioni">
+    <button type="button" data-vista="vista-nav" aria-current="page">Navigazione</button>
+    <button type="button" data-vista="vista-campo">Campo</button>
+    <button type="button" data-vista="vista-altro">Altro</button>
+  </nav>
 </div>
-<div class="avviso-errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.2"></script>
+<div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
+<div class="avviso errore" id="avviso-errore" hidden></div>
+<script type="module" src="./js/app.mjs?v=0.3"></script>
 </body>
 </html>
