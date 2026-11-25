@@ -1,18 +1,21 @@
-// RR Regatta · v0.3: navigazione GPS, campo di regata, boe, rilevamenti, arrivo, salvataggio.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.4";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.4";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.4";
-import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.4";
-import {nuovaSessione, nuovoVento, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.4";
+// RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.5";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.5";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.5";
+import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters} from "./campo.mjs?v=0.5";
+import {nuovaSessione, nuovoVento, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.5";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.4";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina} from "./vento.mjs?v=0.5";
+import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.5";
 
-const VERSIONE = "0.4";
+const VERSIONE = "0.5";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const ora = t => new Date(t).toLocaleTimeString("it-IT");
+const etaTesto = ms => ms < 90000 ? "adesso" : Math.round(ms / 60000) + " min fa";
 const oraBreve = t => new Date(t).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
 
 // Errori del programma sempre visibili: niente più schermate mute.
@@ -31,7 +34,15 @@ function salvaPresto() {
 }
 function evento(testo) { s.eventi.unshift({t: Date.now(), testo}); if (s.eventi.length > 300) s.eventi.length = 300; }
 function modificato() { salvaPresto(); disegnaViste(); aggiorna(); }
-addEventListener("pagehide", () => salva(memoria, s));
+// Le polari sono della barca, non della regata: file a parte, che resta anche con «Nuova sessione».
+let pol = (() => { try { const t = memoria.getItem(CHIAVE_POLARI); if (t) return verificaPolari(JSON.parse(t)); } catch {} return nuovePolari(); })();
+let attesaPolari = null;
+function salvaPolari(subito = false) {
+  clearTimeout(attesaPolari);
+  const fai = () => { try { memoria.setItem(CHIAVE_POLARI, JSON.stringify(pol)); } catch { avvisa("Memoria del telefono piena: esporta le polari."); } };
+  if (subito) fai(); else attesaPolari = setTimeout(fai, 400);
+}
+addEventListener("pagehide", () => { salva(memoria, s); salvaPolari(true); });
 
 let timerAvviso = null;
 function avvisa(testo) { const el = $("avviso"); el.textContent = testo; el.hidden = false; clearTimeout(timerAvviso); timerAvviso = setTimeout(() => el.hidden = true, 3800); }
@@ -43,7 +54,8 @@ const st = {
   segui: true, centro: null, mpp: 1.2,
   mostraTraccia: false, vuoleSchermo: false, wakeLock: null,
   vista: "vista-nav", rilievo: {codice: null, lato: -1},
-  mura: null, ultimaVirata: 0, stima: null, bs: null, allScarso: null, poggiataDa: null, ultimoRegistro: 0, audio: null
+  mura: null, ultimaVirata: 0, stima: null, bs: null, allScarso: null, poggiataDa: null, ultimoRegistro: 0, audio: null,
+  polRegistra: false, polValuta: null, polUltimo: 0, polCambioVele: 0, polNuovi: 0, polClasse: null, polConfig: "attuale", polMetodo: "fermo"
 };
 const gpsAttivo = () => st.watch !== null;
 const fixVivo = () => gpsAttivo() && st.fix && Date.now() - st.fix.received <= 5000;
@@ -95,6 +107,7 @@ function puntoRicevuto(pos, sessione) {
     if (s.traccia.length > 5000) s.traccia.shift();
   }
   elaboraVento(fix, adesso);
+  elaboraPolari(adesso);
   aggiorna();
 }
 function erroreGps(err, sessione) {
@@ -105,7 +118,7 @@ function erroreGps(err, sessione) {
   aggiorna();
 }
 const metri = (a, b) => Math.hypot(rad(b.lon - a.lon) * R * Math.cos(rad(a.lat)), rad(b.lat - a.lat) * R);
-setInterval(() => { if (gpsAttivo()) salva(memoria, s); }, 15000); // traccia salvata periodicamente
+setInterval(() => { if (gpsAttivo()) salva(memoria, s); if (st.polNuovi) { salvaPolari(true); } }, 15000); // traccia e polari salvate periodicamente
 
 // ---------------- Vento (Fase 3) ----------------
 const tar = () => taratura({...s.vento, angoloVirata: s.barca.angoloVirata});
@@ -176,10 +189,13 @@ function rottaPerTaratura() {
 }
 function taraMotore() {
   const c = rottaPerTaratura(); if (c === null) return;
+  if (st.polRegistra) { st.polRegistra = false; evento("Polari: registrazione fermata (taratura a motore)"); }
   if (s.vento.iniziale && !confirm("Sostituire il vento di riferimento " + angolo(s.vento.iniziale.dir) + " con " + angolo(c) + "? Le stime raccolte finora verranno azzerate.")) return;
   s.vento.iniziale = {dir: Math.round(c), metodo: "motore", t: Date.now()};
   s.vento.campioni = []; s.vento.rotazione = null;
-  evento("Vento a motore: " + angolo(c)); avvisa("Vento di riferimento registrato: " + angolo(c) + "."); modificato();
+  evento("Vento a motore: " + angolo(c));
+  avvisa("Vento di riferimento registrato: " + angolo(c) + "." + (st.vista === "vista-polari" ? " Riaccendi «Registra» quando navigate a vela." : ""));
+  modificato();
 }
 function taraBolina(mura) {
   const c = rottaPerTaratura(); if (c === null) return;
@@ -192,8 +208,14 @@ function taraBolina(mura) {
   s.vento.rif[mura] = {cog: Math.round(c), t: Date.now()};
   s.vento.bolina = true;
   const t2 = tar();
+  // Nuovo riferimento dalle due boline: le stime raccolte con quello vecchio non si mescolano con le nuove.
+  if (t2.fonte === "boline" && (t.fonte !== "boline" || Math.abs(delta(t2.dir, t.dir)) > 0.5 || t2.t !== t.t)) { s.vento.campioni = []; s.vento.rotazione = null; st.allScarso = null; }
   evento("Bolina mure a " + mura + ": " + angolo(c));
-  avvisa("Bolina mure a " + mura + " registrata: " + angolo(c) + "." + (t2.misurato ? " Angolo di virata misurato: " + Math.round(t2.angoloVirata) + "°." : " Ora registra l'altra mura."));
+  const nuovo = t2.fonte === "boline" && (t.fonte !== "boline" || t2.t !== t.t);
+  avvisa("Bolina mure a " + mura + " registrata: " + angolo(c) + "." +
+    (nuovo ? " Nuovo vento di riferimento dalle due boline: " + angolo(t2.dir) + ", angolo di virata " + Math.round(t2.angoloVirata) + "°."
+      : t2.misurato && t2.fonte !== "boline" ? " Angolo di virata misurato: " + Math.round(t2.angoloVirata) + "°."
+      : " Ora registra l'altra mura."));
   modificato();
 }
 function taraMano() {
@@ -208,6 +230,154 @@ function azzeraTaratura() {
   s.vento = nuovoVento(s.vento.imp); st.allScarso = null;
   evento("Taratura del vento azzerata"); modificato();
 }
+
+// ---------------- Polari (Fase 4b) ----------------
+const veleAttuali = () => indiceVele(pol, pol.vele);
+function elaboraPolari(adesso) {
+  if (!st.polRegistra) { st.polValuta = null; return; }
+  const t = tar();
+  st.polValuta = valutaPunto({fixes: st.fixes, adesso, rif: {dir: t.dir, t: t.t}, vento: pol.vento,
+    validitaMs: pol.imp.validitaMin * 60000, ultimoCambioVele: st.polCambioVele});
+  if (st.polValuta.ok && adesso - st.polUltimo >= 2000) {
+    st.polUltimo = adesso;
+    pol.campioni.push([adesso, +st.polValuta.twa.toFixed(1), +st.polValuta.sog.toFixed(2), +pol.vento.tws.toFixed(1), veleAttuali()]);
+    if (pol.campioni.length > MAX_CAMPIONI) pol.campioni.splice(0, pol.campioni.length - MAX_CAMPIONI);
+    if (++st.polNuovi % 10 === 0 && st.vista === "vista-polari") disegnaPolari();
+  }
+}
+function registraPolari() {
+  if (!st.polRegistra) {
+    if (!gpsAttivo()) { avvisa("Avvia prima il GPS dalla scheda Navigazione."); return; }
+    if (tar().dir === null) avvisa("Tara la direzione del vento: prua al vento a motore oppure le due boline.");
+    else if (!pol.vento) avvisa("Inserisci l'intensità del vento letta con l'anemometro.");
+  }
+  st.polRegistra = !st.polRegistra; st.polValuta = null;
+  evento("Polari: registrazione " + (st.polRegistra ? "avviata · " + nomeVele(chiaveVele(pol.vele)) : "fermata"));
+  salvaPolari(); modificato();
+}
+function inserisciVento() {
+  const letto = Number(String($("pol-tws").value).replace(",", "."));
+  if ($("pol-tws").value === "" || !Number.isFinite(letto) || letto < 0 || letto > 60) { avvisa("Scrivi il vento letto, in nodi."); return; }
+  const sog = st.polMetodo === "motore" ? (fixVivo() ? st.fix.sog : null) : 0;
+  if (st.polMetodo === "motore" && !Number.isFinite(sog)) { avvisa("A motore serve il GPS attivo: l'app toglie la velocità della barca."); return; }
+  const tws = ventoVero(letto, st.polMetodo, sog);
+  pol.vento = {tws: +tws.toFixed(1), letto, metodo: st.polMetodo, sog: Number.isFinite(sog) ? +sog.toFixed(1) : null, t: Date.now()};
+  pol.letture.push({...pol.vento});
+  evento("Vento letto " + numero(letto, 1) + " kn" + (st.polMetodo === "motore" ? " a motore (barca " + numero(sog, 1) + " kn)" : " a barca ferma") + " → vento vero " + numero(tws, 1) + " kn");
+  avvisa("Vento vero " + numero(tws, 1) + " nodi" + (classeVento(tws) ? " (classe " + classeVento(tws) + " nodi)." : ": troppo poco per le polari."));
+  st.polClasse = null; salvaPolari(); modificato();
+}
+function cambiaVele(tipo, valore) {
+  if (pol.vele[tipo] === valore) return;
+  pol.vele = {...pol.vele, [tipo]: valore};
+  st.polCambioVele = Date.now();
+  evento("Vele: " + nomeVele(chiaveVele(pol.vele)));
+  salvaPolari(); modificato();
+}
+const ultimoHtml = new Map();
+const html = (id, testo) => { if (ultimoHtml.get(id) !== testo) { ultimoHtml.set(id, testo); $(id).innerHTML = testo; } }; // non ridisegna se non cambia: niente tocchi persi
+const pulsantiScelta = (valori, scelto, attr) => valori.map(v => '<button type="button" ' + attr + '="' + esc(v) + '" aria-pressed="' + (v === scelto) + '">' + esc(v) + "</button>").join("");
+function configScelta() {
+  if (st.polConfig === "tutte") return "tutte";
+  if (st.polConfig === "attuale") return veleAttuali();
+  return Number(st.polConfig);
+}
+function classeScelta() { return st.polClasse ?? classeVento(pol.vento?.tws) ?? classiConDati(pol)[0] ?? null; }
+
+function disegnaPolariVivo() {
+  const adesso = Date.now(), t = tar(), r = $("pol-registra");
+  r.setAttribute("aria-pressed", String(st.polRegistra));
+  r.textContent = "Registra le polari: " + (st.polRegistra ? "sì" : "no");
+  const val = st.polValuta, nConfig = pol.campioni.filter(c => c[4] === pol.configurazioni.indexOf(chiaveVele(pol.vele))).length;
+  const el = $("pol-stato");
+  el.className = "pol-stato" + (st.polRegistra && val && !val.ok ? " pausa" : "");
+  el.textContent = !st.polRegistra ? "Registrazione ferma. " + pol.campioni.length + " punti salvati in tutto."
+    : !gpsAttivo() ? "In pausa: GPS fermo."
+    : !val ? "In attesa del GPS…"
+    : val.ok ? "Registro: " + nConfig + " punti con queste vele (" + Math.round(nConfig * 2 / 60) + " min)."
+    : "In pausa: " + val.motivo + ".";
+  const vivo = fixVivo(), twa = vivo && t.dir !== null && Number.isFinite(st.fix.cog) && st.fix.sog >= 0.5 ? delta(st.fix.cog, t.dir) : null;
+  $("pol-twa").textContent = twa === null ? "—" : Math.round(Math.abs(twa)) + "°";
+  $("pol-twa-nota").textContent = twa === null ? (t.dir === null ? "vento da tarare" : " ") : "mure a " + (twa >= 0 ? "sinistra" : "dritta");
+  $("pol-sog").textContent = vivo && Number.isFinite(st.fix.sog) ? numero(st.fix.sog, 1) : "—";
+  const classe = classeVento(pol.vento?.tws), punti = classe ? polare(pol, classe, veleAttuali()) : [];
+  const vp = twa === null ? null : velocitaPolare(punti, twa);
+  $("pol-rif").textContent = vp ? numero(vp, 1) : "—";
+  $("pol-rif-nota").textContent = vp && vivo ? Math.round(st.fix.sog / vp * 100) + "% della polare" : classe ? "ancora pochi dati" : " ";
+  $("pol-vento-stato").textContent = "Direzione: " + (t.dir === null ? "da tarare" : angolo(t.dir) + " (" + (t.fonte === "boline" ? "dalle due boline" : t.fonte) + (t.t ? ", " + etaTesto(adesso - t.t) : "") + ")") +
+    ". Intensità: " + (pol.vento ? numero(pol.vento.tws, 1) + " kn vero (" + (pol.vento.metodo === "motore" ? "letto " + numero(pol.vento.letto, 1) + " a motore" : "a barca ferma") + ", " + etaTesto(adesso - pol.vento.t) + ")" : "da inserire") + ".";
+  $("versione").textContent = "versione " + VERSIONE + (st.polRegistra ? " · polari" : "");
+  $("versione").className = st.polRegistra ? "registra" : "";
+}
+function disegnaPolari() {
+  disegnaPolariVivo();
+  html("pol-prua", pulsantiScelta(PRUA, pol.vele.prua, "data-prua"));
+  html("pol-randa", pulsantiScelta(RANDA, pol.vele.randa, "data-randa"));
+  html("pol-portante", pulsantiScelta(PORTANTI, pol.vele.portante, "data-portante"));
+  $("pol-vele-stato").textContent = "A riva: " + nomeVele(chiaveVele(pol.vele)) + ".";
+  document.querySelectorAll("[data-metodo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.metodo === st.polMetodo)));
+  $("pol-validita").value = String(pol.imp.validitaMin);
+  // Classi di vento e configurazioni con dati.
+  const classe = classeScelta(), conDati = new Set(classiConDati(pol));
+  const classi = [...new Set([...conDati, ...(classeVento(pol.vento?.tws) ? [classeVento(pol.vento.tws)] : [])])].sort((a, b) => a - b);
+  html("pol-classi", classi.length ? classi.map(k => '<button type="button" data-classe="' + k + '" aria-pressed="' + (k === classe) + '" class="' + (conDati.has(k) ? "" : "vuota") + '">' + k + " kn</button>").join("")
+    : '<span class="aiuto">Nessun dato ancora.</span>');
+  const cfg = configurazioniConDati(pol, classe);
+  html("pol-config", '<option value="attuale">Le vele a riva adesso</option><option value="tutte">Le vele migliori per ogni angolo</option>' +
+    cfg.map(i => '<option value="' + i + '">' + esc(nomeVele(pol.configurazioni[i])) + "</option>").join(""));
+  $("pol-config").value = ["attuale", "tutte"].includes(st.polConfig) || cfg.includes(Number(st.polConfig)) ? String(st.polConfig) : "attuale";
+  const scelta = configScelta(), punti = classe ? polare(pol, classe, scelta) : [], o = ottimi(punti);
+  disegnaGraficoPolare(punti, o, classe);
+  $("pol-ottimi").textContent = !punti.some(q => q.valido) ? "Ancora pochi dati per questa polare."
+    : (o.bolina ? "Bolina migliore: " + o.bolina.twa + "° a " + numero(o.bolina.v, 1) + " kn, VMC " + numero(o.bolina.vmg, 1) + " kn (angolo di virata " + 2 * o.bolina.twa + "°). " : "Bolina: dati insufficienti. ") +
+      (o.poppa ? "Poppa migliore: " + o.poppa.twa + "° a " + numero(o.poppa.v, 1) + " kn, VMC " + numero(o.poppa.vmg, 1) + " kn." : "Poppa: dati insufficienti.");
+  const uv = $("pol-usa-virata");
+  uv.hidden = !o.bolina; if (o.bolina) { uv.dataset.angolo = String(2 * o.bolina.twa); uv.textContent = "Usa " + 2 * o.bolina.twa + "° come angolo di virata in regata"; }
+  const tutte = scelta === "tutte";
+  html("pol-tabella", punti.length ? "<tr><th>Angolo</th><th>Velocità</th><th>Punti D/S</th>" + (tutte ? "<th>Vele</th>" : "") + "</tr>" +
+    punti.map(q => '<tr class="' + (!q.valido ? "debole" : q.twa === o.bolina?.twa || q.twa === o.poppa?.twa ? "ottimo" : "") + '"><td>' + q.twa + '°</td><td class="v">' +
+      (q.valido ? numero(q.v, 2) : "(" + numero(q.v, 1) + ")") + "</td><td>" + q.nD + "/" + q.nS + "</td>" + (tutte ? "<td>" + esc(nomeVele(pol.configurazioni[q.config])) + "</td>" : "") + "</tr>").join("") : "");
+  const n = pol.campioni.length, ore = n ? (n * 2 / 3600) : 0;
+  $("pol-riepilogo").textContent = n ? n + " punti (circa " + numero(ore, 1) + " ore di navigazione utile), " + pol.configurazioni.length + " combinazioni di vele, " +
+    (g => g + (g === 1 ? " giorno" : " giorni") + " di uscita.")(new Set(pol.campioni.map(c => new Date(c[0]).toDateString())).size) : "Nessun punto registrato.";
+}
+// Diagramma polare: vento dall'alto, angoli dal vento a destra, cerchi ogni nodo.
+function disegnaGraficoPolare(punti, o, classe) {
+  const svg = $("grafico-polare"), W = svg.clientWidth, H = svg.clientHeight;
+  if (!W || !H) return;
+  if (!punti.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#b5b5b5" font-size="14" text-anchor="middle">' + (classe ? "Nessun punto con " + classe + " nodi" : "Inserisci il vento e registra") + "</text>"; return; }
+  const vmax = Math.max(4, Math.ceil(Math.max(...punti.map(q => q.v)) + 0.5)), cy = H / 2, Rg = Math.min(W - 40, H / 2 - 14), cx = Math.max(26, (W - Rg) / 2 - 10);
+  const xy = (a, v) => ({x: cx + Rg * v / vmax * Math.sin(a * Math.PI / 180), y: cy - Rg * v / vmax * Math.cos(a * Math.PI / 180)});
+  let out = "";
+  for (let v = 1; v <= vmax; v++) {
+    const r = Rg * v / vmax;
+    out += '<path d="M' + cx + " " + (cy - r) + "A" + r + " " + r + " 0 0 1 " + cx + " " + (cy + r) + '" fill="none" stroke="' + (v % 2 ? "#262626" : "#3a3a3a") + '"/>';
+    if (v % 2 === 0 || vmax <= 6) out += '<text x="' + (cx - 4) + '" y="' + (cy - r + 4) + '" fill="#b5b5b5" font-size="11" text-anchor="end">' + v + "</text>";
+  }
+  for (const a of [0, 30, 45, 60, 90, 120, 135, 150, 180]) {
+    const p = xy(a, vmax);
+    out += '<path d="M' + cx + " " + cy + "L" + p.x.toFixed(1) + " " + p.y.toFixed(1) + '" stroke="#2c2c2c"/>';
+    if (a && a < 180) { const q = xy(a, vmax * 1.0); out += '<text x="' + Math.min(W - 4, q.x + 3).toFixed(1) + '" y="' + (q.y + (a < 90 ? -2 : 12)).toFixed(1) + '" fill="#b5b5b5" font-size="11" text-anchor="' + (q.x > W - 30 ? "end" : "start") + '">' + a + "°</text>"; }
+  }
+  out += '<text x="' + cx + '" y="11" fill="#fff" font-size="11" text-anchor="middle">VENTO</text>';
+  const validi = punti.filter(q => q.valido);
+  if (validi.length > 1) out += '<path d="' + validi.map((q, i) => { const p = xy(q.twa, q.v); return (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1); }).join("") + '" fill="none" stroke="#ff0000" stroke-width="3" stroke-linejoin="round"/>';
+  for (const q of punti) {
+    const p = xy(q.twa, q.v);
+    out += q.valido ? '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4" fill="#fff"/>' : '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4" fill="none" stroke="#b5b5b5" stroke-width="1.5"/>';
+  }
+  for (const k of ["bolina", "poppa"]) if (o[k]) {
+    const p = xy(o[k].twa, o[k].v);
+    out += '<path d="M' + cx + " " + cy + "L" + p.x.toFixed(1) + " " + p.y.toFixed(1) + '" stroke="#fff" stroke-dasharray="4 4"/><circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="7" fill="none" stroke="#fff" stroke-width="2"/>';
+  }
+  svg.innerHTML = out;
+}
+function scaricaFile(nome, testo, tipo) {
+  const url = URL.createObjectURL(new Blob([testo], {type: tipo}));
+  const a = document.createElement("a"); a.href = url; a.download = nome; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const dataFile = () => { const d = new Date(); return d.toISOString().slice(0, 10) + "-" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0"); };
 
 // ---------------- Azioni di regata ----------------
 const puntoGps = () => ({lat: st.fix.lat, lon: st.fix.lon, acc: Number.isFinite(st.fix.accuracy) ? Math.round(st.fix.accuracy) : null, t: Date.now(), fonte: "gps"});
@@ -308,7 +478,7 @@ document.addEventListener("visibilitychange", () => {
 // ---------------- Disegno: parte che cambia ogni secondo ----------------
 // Ridisegno raggruppato con un timer: a differenza di requestAnimationFrame non si ferma mai,
 // anche se il browser considera la pagina in secondo piano.
-function aggiorna() { if (!aggiorna.attesa) { aggiorna.attesa = true; setTimeout(() => { aggiorna.attesa = false; disegnaNav(); }, 30); } }
+function aggiorna() { if (!aggiorna.attesa) { aggiorna.attesa = true; setTimeout(() => { aggiorna.attesa = false; disegnaNav(); if (st.vista === "vista-polari") disegnaPolariVivo(); }, 30); } }
 
 function descriviFonte(ob) {
   switch (ob.fonte) {
@@ -579,7 +749,7 @@ carta.addEventListener("pointercancel", rilascia);
 carta.addEventListener("wheel", e => { e.preventDefault(); const p = puntoSvg(e); zoom(e.deltaY < 0 ? 1.2 : 1 / 1.2, p.x, p.y); }, {passive: false});
 
 // ---------------- Disegno: liste (solo quando cambiano i dati o la scheda) ----------------
-function disegnaViste() { if (st.vista === "vista-campo") disegnaCampo(); if (st.vista === "vista-altro") disegnaAltro(); if (st.vista === "vista-vento") disegnaVento(); }
+function disegnaViste() { if (st.vista === "vista-campo") disegnaCampo(); if (st.vista === "vista-altro") disegnaAltro(); if (st.vista === "vista-vento") disegnaVento(); if (st.vista === "vista-polari") disegnaPolari(); }
 
 // ---------------- Scheda Vento ----------------
 function disegnaVento() {
@@ -600,7 +770,7 @@ function disegnaVento() {
   $("v-tipo").textContent = {"in raccolta": "In raccolta dati", oscillante: "Oscillante", persistente: "Persistente verso " + cl.lato, stabile: "Stabile"}[cl.tipo];
   $("v-tipo-testo").textContent = cl.testo;
   disegnaGraficoVento(adesso, sv.medio);
-  const metodo = v.iniziale?.metodo || (t.dir !== null ? "dalle boline" : null);
+  const metodo = (t.fonte === "boline" ? "dalle due boline" : t.fonte) + (t.t ? ", " + etaTesto(adesso - t.t) : "");
   $("tar-stato").textContent = t.dir === null ? "Vento non tarato."
     : "Riferimento " + angolo(t.dir) + " (" + metodo + "). Boline: dritta " + (v.rif.dritta ? angolo(v.rif.dritta.cog) : "—") + ", sinistra " + (v.rif.sinistra ? angolo(v.rif.sinistra.cog) : "—") +
       ". Angolo di virata " + Math.round(t.angoloVirata) + "° " + (t.misurato ? "misurato." : "predefinito (registra le due boline per misurarlo).");
@@ -733,7 +903,7 @@ $("nuova-aggiungi").addEventListener("click", () => {
 // ---------------- Collegamenti dei pulsanti ----------------
 function mostraVista(id) {
   st.vista = id;
-  for (const v of ["vista-nav", "vista-vento", "vista-campo", "vista-altro"]) $(v).hidden = v !== id;
+  for (const v of ["vista-nav", "vista-vento", "vista-campo", "vista-polari", "vista-altro"]) $(v).hidden = v !== id;
   document.querySelectorAll(".schede button").forEach(b => { if (b.dataset.vista === id) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   disegnaViste(); aggiorna();
 }
@@ -774,7 +944,7 @@ $("btn-schermo").addEventListener("click", cambiaSchermo);
 $("btn-traccia").addEventListener("click", () => { st.mostraTraccia = !st.mostraTraccia; disegnaAltro(); aggiorna(); });
 $("btn-esporta").addEventListener("click", () => {
   const d = new Date(), nome = "rr-regatta-" + d.toISOString().slice(0, 10) + "-" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + ".json";
-  const url = URL.createObjectURL(new Blob([JSON.stringify({...s, esportata: d.toISOString(), app: "RR Regatta " + VERSIONE}, null, 1)], {type: "application/json"}));
+  const url = URL.createObjectURL(new Blob([JSON.stringify({...s, polari: pol, esportata: d.toISOString(), app: "RR Regatta " + VERSIONE}, null, 1)], {type: "application/json"}));
   const a = document.createElement("a"); a.href = url; a.download = nome; document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   evento("Sessione esportata: " + nome); avvisa("File " + nome + " scaricato."); salvaPresto(); disegnaAltro();
@@ -786,7 +956,7 @@ $("file-importa").addEventListener("change", async e => {
   try {
     const obj = verifica(JSON.parse(await file.text()));
     if (!confirm("Sostituire la sessione attuale con «" + file.name + "»? Esporta prima quella attuale se vuoi conservarla.")) return;
-    delete obj.esportata; delete obj.app;
+    delete obj.esportata; delete obj.app; delete obj.polari;
     s = obj; evento("Sessione importata: " + file.name); avvisa("Sessione importata."); modificato();
   } catch (err) { avvisa("File non valido: " + err.message + "."); }
 });
@@ -826,6 +996,65 @@ impostazione("imp-lunghezza", v => { const n = Number(v); if (n >= 3 && n <= 40)
 impostazione("imp-virata", v => { const n = Number(v); if (n >= 60 && n <= 130) s.barca.angoloVirata = n; else avvisa("Angolo di virata tra 60 e 130 gradi."); });
 $("imp-audio").addEventListener("click", () => { s.vento.imp.audio = !s.vento.imp.audio; if (s.vento.imp.audio) segnale(); salvaPresto(); disegnaVento(); });
 
+// Polari
+$("pol-registra").addEventListener("click", registraPolari);
+$("pol-motore").addEventListener("click", taraMotore);
+$("pol-dritta").addEventListener("click", () => taraBolina("dritta"));
+$("pol-sinistra").addEventListener("click", () => taraBolina("sinistra"));
+document.querySelectorAll("[data-passo]").forEach(b => b.addEventListener("click", () => {
+  const v = Number(String($("pol-tws").value).replace(",", ".")) || (pol.vento?.letto ?? 0);
+  $("pol-tws").value = String(Math.max(0, Math.min(60, v + Number(b.dataset.passo))));
+}));
+document.querySelectorAll("[data-metodo]").forEach(b => b.addEventListener("click", () => { st.polMetodo = b.dataset.metodo; disegnaPolari(); }));
+$("pol-tws-ok").addEventListener("click", inserisciVento);
+for (const tipo of ["prua", "randa", "portante"]) $("pol-" + tipo).addEventListener("click", e => { const b = e.target.closest("[data-" + tipo + "]"); if (b) cambiaVele(tipo, b.dataset[tipo]); });
+$("pol-classi").addEventListener("click", e => { const b = e.target.closest("[data-classe]"); if (b) { st.polClasse = Number(b.dataset.classe); disegnaPolari(); } });
+$("pol-config").addEventListener("change", e => { st.polConfig = e.target.value; disegnaPolari(); });
+$("pol-validita").addEventListener("change", e => { pol.imp.validitaMin = Number(e.target.value); salvaPolari(); disegnaPolari(); });
+$("pol-usa-virata").addEventListener("click", e => {
+  const a = Number(e.currentTarget.dataset.angolo);
+  if (!(a >= 60 && a <= 130)) { avvisa("Angolo di virata fuori dai limiti (60–130°)."); return; }
+  if (!confirm("Usare " + a + "° come angolo di virata tipico in regata? Vale finché non registrate le due boline.")) return;
+  s.barca.angoloVirata = a; evento("Angolo di virata dalle polari: " + a + "°"); avvisa("Angolo di virata tipico: " + a + "°."); modificato();
+});
+$("pol-esporta").addEventListener("click", () => {
+  const nome = "rr-polari-" + dataFile() + ".json";
+  scaricaFile(nome, JSON.stringify({...pol, esportata: new Date().toISOString(), app: "RR Regatta " + VERSIONE}), "application/json");
+  evento("Polari esportate: " + nome); avvisa("File " + nome + " scaricato.");
+});
+$("pol-csv").addEventListener("click", () => {
+  if (!pol.campioni.length) { avvisa("Nessun punto registrato."); return; }
+  const scelta = configScelta(), nome = "rr-polare-" + dataFile() + ".csv";
+  const titolo = "RR Regatta - polare: " + (scelta === "tutte" ? "vele migliori per ogni angolo" : nomeVele(pol.configurazioni[scelta] ?? chiaveVele(pol.vele))) + " - velocita sul fondo in nodi\r\n";
+  scaricaFile(nome, "\ufeff" + titolo + tabellaCsv(pol, scelta), "text/csv;charset=utf-8");
+  avvisa("Tabella " + nome + " scaricata.");
+});
+$("pol-importa").addEventListener("click", () => $("pol-file").click());
+$("pol-file").addEventListener("change", async e => {
+  const file = e.target.files?.[0]; e.target.value = "";
+  if (!file) return;
+  try {
+    const dati = JSON.parse(await file.text());
+    const altro = verificaPolari(dati.formato === "rr-regatta" ? dati.polari : dati);
+    const n = unisciPolari(pol, altro);
+    evento("Polari importate da " + file.name + ": " + n + " punti nuovi"); avvisa(n + " punti nuovi aggiunti alle polari."); salvaPolari(); modificato();
+  } catch (err) { avvisa("File non valido: " + err.message + "."); }
+});
+$("pol-scarta").addEventListener("click", () => {
+  const limite = Date.now() - 5 * 60000, n = pol.campioni.filter(c => c[0] > limite).length;
+  if (!n) { avvisa("Nessun punto negli ultimi 5 minuti."); return; }
+  if (!confirm("Scartare i " + n + " punti registrati negli ultimi 5 minuti?")) return;
+  pol.campioni = pol.campioni.filter(c => c[0] <= limite);
+  evento("Polari: scartati " + n + " punti degli ultimi 5 minuti"); salvaPolari(); modificato();
+});
+$("pol-azzera").addEventListener("click", () => {
+  if (!pol.campioni.length) { avvisa("Le polari sono già vuote."); return; }
+  if (!confirm("Cancellare tutte le polari (" + pol.campioni.length + " punti)? Non si può annullare: esportale prima se vuoi conservarle.")) return;
+  pol = {...nuovePolari(), vele: pol.vele, imp: pol.imp, vento: pol.vento}; st.polRegistra = false;
+  evento("Polari cancellate"); salvaPolari(true); modificato();
+});
+
 setInterval(aggiorna, 1000);
 setInterval(() => { if (st.vista === "vista-vento") disegnaVento(); }, 2000);
+setInterval(() => { if (st.vista === "vista-polari") disegnaPolariVivo(); }, 15000); // età di taratura e vento
 mostraVista("vista-nav");

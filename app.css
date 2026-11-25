@@ -120,7 +120,7 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .registro li{margin-bottom:5px}
 .registro b{color:#fff}
 
-.schede{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--linea);background:var(--nero);padding-bottom:env(safe-area-inset-bottom)}
+.schede{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr;border-top:1px solid var(--linea);background:var(--nero);padding-bottom:env(safe-area-inset-bottom)}
 .schede button{min-height:50px;border:0;background:none;font-size:14px;padding:0 2px;font-weight:800;color:var(--grigio);border-top:3px solid transparent}
 .schede button[aria-current="page"]{color:#fff;border-top-color:var(--rosso)}
 
@@ -180,3 +180,33 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
 .impostazioni select,.impostazioni input{width:auto;min-width:84px}
 @media (min-width:900px) and (orientation:landscape){.strumenti{grid-template-columns:repeat(3,minmax(0,1fr))}.valore{font-size:46px}}
 @media (max-height:500px) and (orientation:landscape){.valore{font-size:30px}.strumenti{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* ----- v0.5: polari ----- */
+.schede button{font-size:13px}
+.titolo small.registra{color:#fff}
+.titolo small.registra::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--rosso);margin-right:5px;vertical-align:1px;animation:pulsa 1.4s infinite}
+.interruttore.registra{font-size:17px;min-height:54px;margin-top:0}
+.interruttore.registra[aria-pressed="true"]{background:var(--rosso);border:2px solid var(--rosso);color:#fff}
+.pol-stato{font-size:14px;font-weight:700;margin:8px 0;line-height:1.4}
+.pol-stato.pausa{color:#000;background:#fff;border-radius:6px;padding:4px 7px}
+.sotto-titolo{font-size:12px;font-weight:800;color:var(--grigio);letter-spacing:.3px;margin:12px 0 5px}
+.riga-vento{display:grid;grid-template-columns:58px 1fr 58px;gap:7px;margin-bottom:7px}
+.riga-vento input{font-size:26px;font-weight:800;text-align:center;min-height:54px}
+.passo{min-height:54px;border-radius:10px;border:1px solid #777;background:#222;font-size:28px;font-weight:800}
+.scelte{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.scelte.tre{grid-template-columns:repeat(3,minmax(0,1fr))}
+.scelte.classi{grid-template-columns:repeat(5,minmax(0,1fr))}
+.scelte button{min-height:46px;border-radius:9px;border:1px solid #555;background:#202020;font-weight:800;font-size:14px;padding:2px 3px;line-height:1.1;overflow:hidden;text-overflow:ellipsis}
+.scelte button[aria-pressed="true"]{border:3px solid var(--rosso);background:#000}
+.scelte button.vuota{color:var(--spento)}
+.campo-scelta{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800;color:var(--grigio);margin-top:10px}
+.fig-polare{position:relative;height:min(390px,96vw);margin-top:8px;border:1px solid #333;border-radius:9px;background:#101010}
+.fig-polare svg{position:absolute;inset:0;width:100%;height:100%}
+.tabella-polare{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;margin-top:6px}
+.tabella-polare th{font-size:11px;color:var(--grigio);text-align:left;font-weight:800;padding:4px;border-bottom:1px solid #444}
+.tabella-polare td{padding:5px 4px;border-bottom:1px solid #2a2a2a}
+.tabella-polare td.v{font-weight:800;font-size:16px}
+.tabella-polare tr.debole td{color:var(--spento)}
+.tabella-polare tr.ottimo td{background:#000}
+.tabella-polare tr.ottimo td:first-child{border-left:3px solid var(--rosso)}
+@media (min-width:900px) and (orientation:landscape){.fig-polare{height:420px}}

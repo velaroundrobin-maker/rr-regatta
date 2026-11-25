@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
-<link rel="stylesheet" href="./app.css?v=0.4">
+<link rel="stylesheet" href="./app.css?v=0.5">
 <title>RR Regatta</title>
 </head>
 <body>
 <div class="app">
   <header class="testata">
     <img src="./round-robin-logo.png" alt="Logo Round Robin">
-    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.4</small></div>
+    <div class="titolo"><strong>RR Regatta</strong><small id="versione">versione 0.5</small></div>
     <div class="stato-gps" id="stato-gps" role="status" aria-live="polite"><i></i><span id="stato-gps-testo">GPS fermo</span></div>
   </header>
 
@@ -187,6 +187,85 @@
     </section>
   </main>
 
+  <!-- POLARI -->
+  <main class="vista scorre" id="vista-polari" hidden>
+    <section class="blocco">
+      <h2>REGISTRAZIONE DELLE POLARI</h2>
+      <button type="button" class="interruttore registra" id="pol-registra" aria-pressed="false">Registra le polari: no</button>
+      <p class="pol-stato" id="pol-stato">—</p>
+      <div class="vento-griglia">
+        <div><span>Angolo dal vento</span><b id="pol-twa">—</b><small id="pol-twa-nota">&nbsp;</small></div>
+        <div><span>Velocità</span><b id="pol-sog">—</b><small>nodi sul fondo</small></div>
+        <div><span>Polare</span><b id="pol-rif">—</b><small id="pol-rif-nota">&nbsp;</small></div>
+      </div>
+    </section>
+
+    <section class="blocco">
+      <h2>VENTO</h2>
+      <p class="tar-stato" id="pol-vento-stato">—</p>
+      <p class="sotto-titolo">Direzione</p>
+      <button type="button" class="secondario largo" id="pol-motore">Prua al vento a motore: memorizza</button>
+      <div class="riga-pulsanti">
+        <button type="button" class="secondario" id="pol-dritta">Bolina mure a dritta</button>
+        <button type="button" class="secondario" id="pol-sinistra">Bolina mure a sinistra</button>
+      </div>
+      <p class="aiuto">Vale l'ultima taratura completa: il vento a motore, oppure le due boline (una per mura) registrate a breve distanza. La registrazione si ferma quando la taratura è più vecchia del limite scelto qui sotto.</p>
+      <p class="sotto-titolo">Intensità (anemometro)</p>
+      <div class="riga-vento">
+        <button type="button" class="passo" data-passo="-1" aria-label="Un nodo in meno">−</button>
+        <input id="pol-tws" type="number" inputmode="decimal" min="0" max="60" step="0.5" placeholder="nodi" aria-label="Vento letto in nodi">
+        <button type="button" class="passo" data-passo="1" aria-label="Un nodo in più">+</button>
+      </div>
+      <div class="segmento" role="group" aria-label="Come è stato letto il vento">
+        <button type="button" data-metodo="fermo" aria-pressed="true">Barca ferma</button>
+        <button type="button" data-metodo="motore" aria-pressed="false">A motore prua al vento</button>
+      </div>
+      <button type="button" class="principale largo" id="pol-tws-ok">Inserisci il vento</button>
+      <p class="aiuto">L'anemometro a mano legge il vento apparente. A barca ferma è il vento vero; a motore con la prua al vento l'app toglie la velocità della barca. Non leggerlo mentre navigate a vela. Tenetelo sempre alla stessa altezza, il più in alto possibile e lontano dalle vele.</p>
+    </section>
+
+    <section class="blocco">
+      <h2>VELE A RIVA</h2>
+      <p class="tar-stato" id="pol-vele-stato">—</p>
+      <p class="sotto-titolo">Vela di prua</p>
+      <div class="scelte" id="pol-prua"></div>
+      <p class="sotto-titolo">Randa</p>
+      <div class="scelte tre" id="pol-randa"></div>
+      <p class="sotto-titolo">Vela portante</p>
+      <div class="scelte" id="pol-portante"></div>
+      <p class="aiuto">Dopo un cambio di vele l'app aspetta un minuto prima di registrare, il tempo di regolarle.</p>
+    </section>
+
+    <section class="blocco">
+      <h2>POLARE</h2>
+      <p class="sotto-titolo">Vento vero</p>
+      <div class="scelte classi" id="pol-classi"></div>
+      <label class="campo-scelta">Vele <select id="pol-config"></select></label>
+      <div class="fig-polare"><svg id="grafico-polare" role="img" aria-label="Diagramma polare: velocità della barca per angolo dal vento"></svg></div>
+      <p class="tar-stato" id="pol-ottimi">—</p>
+      <button type="button" class="secondario largo" id="pol-usa-virata" hidden>Usa questo angolo di virata in regata</button>
+      <table class="tabella-polare" id="pol-tabella"></table>
+      <p class="aiuto">Velocità sul fondo. In ogni casella l'app prende la velocità superata solo dal 20% dei punti (80° percentile): è la velocità della barca ben condotta, senza le punte dovute alle onde. Servono almeno 30 secondi di navigazione stabile per casella; con meno dati il valore è tra parentesi. D/S: punti con mure a dritta e a sinistra. Navigate ogni angolo su tutte e due le mure, così la corrente si compensa.</p>
+    </section>
+
+    <section class="blocco">
+      <h2>DATI DELLE POLARI</h2>
+      <p class="aiuto" id="pol-riepilogo">—</p>
+      <div class="impostazioni">
+        <label>Taratura e vento valgono per <select id="pol-validita"><option>10</option><option>15</option><option>20</option><option>30</option><option>45</option></select> minuti</label>
+      </div>
+      <div class="riga-pulsanti">
+        <button type="button" class="secondario" id="pol-esporta">Esporta</button>
+        <button type="button" class="secondario" id="pol-csv">Tabella</button>
+        <button type="button" class="secondario" id="pol-importa">Importa</button>
+        <input type="file" id="pol-file" accept=".json,application/json" hidden>
+      </div>
+      <p class="aiuto">Esporta: tutti i punti, da mandare per l'analisi. Tabella: la polare per il foglio di calcolo. Importa: aggiunge i punti di un altro file, senza doppioni. Le polari restano sul telefono anche con «Nuova sessione».</p>
+      <button type="button" class="secondario largo" id="pol-scarta">Scarta gli ultimi 5 minuti</button>
+      <button type="button" class="collegamento-testo" id="pol-azzera">Cancella tutte le polari</button>
+    </section>
+  </main>
+
   <!-- ALTRO -->
   <main class="vista scorre" id="vista-altro" hidden>
     <section class="blocco">
@@ -219,11 +298,12 @@
     <button type="button" data-vista="vista-nav" aria-current="page">Navigazione</button>
     <button type="button" data-vista="vista-vento">Vento</button>
     <button type="button" data-vista="vista-campo">Campo</button>
+    <button type="button" data-vista="vista-polari">Polari</button>
     <button type="button" data-vista="vista-altro">Altro</button>
   </nav>
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.4"></script>
+<script type="module" src="./js/app.mjs?v=0.5"></script>
 </body>
 </html>

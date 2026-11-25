@@ -1,29 +1,44 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.4";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.5";
 
 export const MURE = ["dritta", "sinistra"];
 
 // ---------------- Taratura ----------------
 // cal = {iniziale: {dir, metodo, t} | null, rif: {dritta: {cog,t}|null, sinistra: {cog,t}|null}, angoloVirata: gradi}
-// Restituisce la direzione di riferimento del vento e lo scostamento della bolina stretta su ciascuna mura.
+// Vale la taratura più recente:
+// - il vento a motore (o a mano) è il riferimento; le boline registrate entro 20 minuti da lì danno lo scostamento
+//   reale di ciascuna mura (anche asimmetrico, per corrente e scarroccio);
+// - una coppia di boline (dritta e sinistra) registrata più di 20 minuti dopo il vento a motore diventa il nuovo
+//   riferimento: il vento è la bisettrice e ogni mura sta a metà dell'angolo di virata misurato.
+// L'ora del riferimento («t») è quella della lettura più vecchia che lo compone: serve a sapere quanto è aggiornato.
+export const FINESTRA_TARATURA_MS = 20 * 60000;
 export function taratura(cal) {
-  const r = cal?.rif || {}, def = (cal?.angoloVirata || 90) / 2;
-  let dir = Number.isFinite(cal?.iniziale?.dir) ? cal.iniziale.dir : null;
-  let fonte = cal?.iniziale?.metodo || null;
-  if (dir === null && r.dritta && r.sinistra) { dir = circularMean([r.dritta.cog, r.sinistra.cog]); fonte = "boline"; }
-  if (dir === null) return {dir: null, off: null, fonte: null, angoloVirata: null, misurato: false};
-  // Mure a sinistra: rotta a destra del vento (scostamento positivo); mure a dritta: negativo.
-  let s = r.sinistra ? delta(r.sinistra.cog, dir) : null;
-  let d = r.dritta ? delta(r.dritta.cog, dir) : null;
+  const r = cal?.rif || {}, def = (cal?.angoloVirata || 90) / 2, F = FINESTRA_TARATURA_MS;
+  const ini = Number.isFinite(cal?.iniziale?.dir) ? cal.iniziale : null;
+  const tOk = x => Number.isFinite(x?.t);
+  const coppia = r.dritta && r.sinistra
+    ? {dir: circularMean([r.dritta.cog, r.sinistra.cog]), t: tOk(r.dritta) && tOk(r.sinistra) ? Math.min(r.dritta.t, r.sinistra.t) : null} : null;
+  const coppiaNuova = coppia && (!ini || (Number.isFinite(coppia.t) && tOk(ini) && coppia.t > ini.t + F));
+  if (coppiaNuova) {
+    const s = delta(r.sinistra.cog, coppia.dir), ok = s >= 15 && s <= 80;
+    const m = ok ? s : def;
+    return {dir: coppia.dir, off: {sinistra: m, dritta: -m}, fonte: "boline", t: coppia.t, angoloVirata: 2 * m, misurato: ok};
+  }
+  if (!ini) return {dir: null, off: null, fonte: null, t: null, angoloVirata: null, misurato: false};
+  const dir = ini.dir;
+  // Solo le boline vicine nel tempo al riferimento ne misurano lo scostamento.
+  const vicina = x => x && (!tOk(x) || !tOk(ini) || Math.abs(x.t - ini.t) <= F);
+  let s = vicina(r.sinistra) ? delta(r.sinistra.cog, dir) : null;
+  let d = vicina(r.dritta) ? delta(r.dritta.cog, dir) : null;
   if (s !== null && (s < 15 || s > 80)) s = null;   // riferimento incoerente con il vento: ignorato
   if (d !== null && (d > -15 || d < -80)) d = null;
+  const misurato = s !== null && d !== null;
   if (s === null && d !== null) s = -d;
   if (d === null && s !== null) d = -s;
   if (s === null) { s = def; d = -def; }
-  const misurato = !!(r.dritta && r.sinistra);
-  return {dir, off: {sinistra: s, dritta: d}, fonte, angoloVirata: s - d, misurato};
+  return {dir, off: {sinistra: s, dritta: d}, fonte: ini.metodo || "motore", t: tOk(ini) ? ini.t : null, angoloVirata: s - d, misurato};
 }
 
 export function muraDa(cog, dirVento) {

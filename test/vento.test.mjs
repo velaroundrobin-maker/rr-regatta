@@ -118,3 +118,26 @@ test("lato favorito della linea di partenza", () => {
   assert.ok(Math.abs(l.sbilanciamento - 10) < 0.1);
   assert.equal(latoFavorito(cdr, pin, 15).favorito, "CdR");
 });
+
+test("taratura: le boline vicine al vento a motore danno lo scostamento di ciascuna mura", () => {
+  const T = 1e9;
+  const t = taratura({iniziale: {dir: 0, metodo: "motore", t: T}, rif: {dritta: {cog: 313, t: T + 120000}, sinistra: {cog: 49, t: T + 300000}}});
+  assert.equal(t.dir, 0); assert.equal(t.fonte, "motore"); assert.equal(t.t, T);
+  assert.equal(t.off.sinistra, 49); assert.equal(t.off.dritta, -47);
+});
+test("taratura: una coppia di boline più recente diventa il nuovo riferimento", () => {
+  const T = 1e9, min = 60000;
+  const t = taratura({iniziale: {dir: 0, metodo: "motore", t: T}, rif: {dritta: {cog: 325, t: T + 40 * min}, sinistra: {cog: 61, t: T + 42 * min}}});
+  vicino(t.dir, 13); assert.equal(t.fonte, "boline"); assert.equal(t.t, T + 40 * min);
+  assert.equal(t.off.sinistra, 48); assert.equal(t.off.dritta, -48); assert.equal(t.angoloVirata, 96); assert.equal(t.misurato, true);
+});
+test("taratura: una sola bolina nuova, lontana dal vento a motore, non sposta lo scostamento", () => {
+  const T = 1e9, min = 60000;
+  const t = taratura({iniziale: {dir: 0, metodo: "motore", t: T}, rif: {dritta: {cog: 315, t: T + 40 * min}, sinistra: {cog: 46, t: T + 2 * min}}});
+  assert.equal(t.fonte, "motore"); assert.equal(t.off.sinistra, 46); assert.equal(t.off.dritta, -46);
+});
+test("taratura: vento a motore più recente della coppia di boline", () => {
+  const T = 1e9, min = 60000;
+  const t = taratura({iniziale: {dir: 20, metodo: "motore", t: T + 60 * min}, rif: {dritta: {cog: 315, t: T}, sinistra: {cog: 45, t: T + min}}, angoloVirata: 90});
+  assert.equal(t.dir, 20); assert.equal(t.fonte, "motore"); assert.deepEqual(t.off, {sinistra: 45, dritta: -45}); assert.equal(t.misurato, false);
+});

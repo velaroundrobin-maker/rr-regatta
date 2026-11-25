@@ -4,6 +4,14 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.5 — polari apprese in allenamento
+
+- Nuova scheda Polari: registrazione delle velocità della barca per angolo dal vento, separate per intensità del vento e per vele a riva (J1, J2, J3, Genoa 1–3; randa piena, 1 o 2 mani; spinnaker, gennaker, Code 0).
+- Direzione del vento dalla taratura più recente (prua al vento a motore o coppia di boline); intensità inserita dall'equipaggio con l'anemometro (a barca ferma, oppure a motore prua al vento togliendo la velocità della barca).
+- Si registra solo con rotta e velocità stabili da 20 secondi, taratura e vento aggiornati (limite regolabile), un minuto dopo ogni cambio di vele.
+- Polare: 80° percentile per casella, punti per mura, angoli migliori di bolina e poppa con la VMC, «% della polare» in tempo reale, diagramma e tabella; esporta, tabella per foglio di calcolo, importa e unisci.
+- Taratura: vale sempre la più recente; una coppia di boline registrata dopo più di 20 minuti dal vento a motore diventa il nuovo riferimento.
+
 ## Versione 0.4 — vento e tattica di bolina
 
 - Nuova scheda Vento. Taratura del vento in tre modi: a motore con la prua al vento, con le boline sulle due mure (misura l'angolo di virata reale), oppure a mano.
@@ -43,5 +51,6 @@ Nessun dato viene inviato a server esterni.
 - `js/nav.mjs` — smorzamento, moto calcolato, formati italiani
 - `js/campo.mjs` — modelli di campo, sequenza, obiettivo della tappa, triangolazione
 - `js/stato.mjs` — sessione, cambio modello, salvataggio e verifica dei file
+- `js/polari.mjs` — raccolta dei punti, calcolo della polare, angoli ottimi, tabella, unione di file
 - `js/vento.mjs` — taratura, stima del vento in bolina, salto, buono/scarso, tipo di vento, allarmi, bordo favorevole, lay-line, lato favorito della linea
 - `test/` — `node --test test/*.test.mjs`
