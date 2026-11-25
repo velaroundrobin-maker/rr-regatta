@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="../round-robin-logo.png" type="image/png">
+<title>RR Regatta · Diagnostica GPS</title>
+<style>
+:root{--nero:#000;--fondo:#0d0d0d;--riquadro:#181818;--linea:#3a3a3a;--bianco:#fff;--grigio:#bdbdbd;--rosso:#ff0000}
+*{box-sizing:border-box;min-width:0}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--fondo);color:var(--bianco);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--nero);border-bottom:3px solid var(--rosso)}
+header img{width:48px;height:48px;border-radius:50%;background:#fff;flex:none}
+header h1{margin:0;font-size:20px;line-height:1.15}
+header small{display:block;color:var(--grigio);font-size:13px;font-weight:600}
+main{max-width:760px;margin:0 auto;padding:14px 14px 40px;display:flex;flex-direction:column;gap:14px}
+.stato{border:2px solid var(--linea);background:var(--riquadro);border-radius:12px;padding:14px 16px}
+.stato strong{display:block;font-size:21px;line-height:1.2}
+.stato p{margin:6px 0 0;color:var(--grigio);font-size:15px}
+.stato.ok{border-color:var(--bianco)}
+.stato.cerca strong::after{content:"";display:inline-block;width:10px;height:10px;margin-left:10px;border-radius:50%;background:var(--bianco);animation:pulsa 1s infinite}
+.stato.errore{border-color:var(--rosso);background:#3a0000}
+.stato.errore p{color:#fff}
+@keyframes pulsa{50%{opacity:.15}}
+@media(prefers-reduced-motion:reduce){.stato.cerca strong::after{animation:none}}
+.comandi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;font-weight:800;min-height:52px;border-radius:10px;border:2px solid #666;background:#262626;color:#fff;padding:10px 12px;cursor:pointer;touch-action:manipulation}
+button.primario{background:var(--rosso);border-color:var(--rosso);grid-column:1/-1;font-size:18px}
+button:disabled{opacity:.45}
+button.primario:disabled{background:#262626;border-color:#666;opacity:1;color:#bdbdbd}
+button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.riquadro{background:var(--riquadro);border:1px solid var(--linea);border-radius:12px;padding:14px 16px}
+.riquadro h2{margin:0 0 10px;font-size:13px;letter-spacing:.5px;color:var(--rosso)}
+.coord{font-size:clamp(22px,6.4vw,32px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;overflow-wrap:anywhere}
+.griglia{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.dato{border:1px solid var(--linea);border-radius:9px;padding:9px 11px;background:#111}
+.dato span{display:block;font-size:12px;color:var(--grigio);font-weight:700}
+.dato b{display:block;font-size:20px;font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+.dato i{display:block;font-style:normal;font-size:12px;color:var(--grigio);margin-top:2px}
+.fig{position:relative;height:300px;border:1px solid var(--linea);border-radius:10px;background:#111;overflow:hidden}
+.fig svg{position:absolute;inset:0;width:100%;height:100%}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:7px 0;border-bottom:1px solid #2a2a2a;vertical-align:top}
+td:first-child{color:var(--grigio);width:44%;padding-right:10px}
+td:last-child{font-weight:700;overflow-wrap:anywhere}
+.avviso{color:#fff;background:#5a0000;padding:1px 5px;border-radius:4px}
+ol#registro{margin:0;padding-left:20px;font-size:14px;max-height:280px;overflow:auto}
+ol#registro li{margin-bottom:6px;overflow-wrap:anywhere}
+ol#registro time{color:var(--grigio);font-variant-numeric:tabular-nums;margin-right:6px}
+textarea{width:100%;min-height:150px;margin-top:10px;background:#111;color:#fff;border:1px solid var(--linea);border-radius:8px;font:13px/1.4 ui-monospace,monospace;padding:8px}
+.nota{font-size:13px;color:var(--grigio);margin:8px 0 0}
+#senza-js{background:#3a0000;border:2px solid var(--rosso);border-radius:12px;padding:14px 16px}
+</style>
+</head>
+<body>
+<header>
+  <img src="../round-robin-logo.png" alt="Logo Round Robin">
+  <div><h1>RR Regatta · Diagnostica GPS</h1><small id="versione">versione 0.1</small></div>
+</header>
+<main>
+  <div id="senza-js"><strong>JavaScript non è partito.</strong><br>Se leggi questo messaggio per più di qualche secondo, il browser non esegue il programma della pagina. Fai uno screenshot e mandalo.</div>
+
+  <section class="stato" id="stato" aria-live="polite">
+    <strong id="stato-titolo">GPS fermo</strong>
+    <p id="stato-testo">Premi «Avvia GPS». Il telefono chiederà il permesso di usare la posizione: rispondi «Consenti».</p>
+  </section>
+
+  <div class="comandi">
+    <button class="primario" id="btn-avvia" type="button">Avvia GPS</button>
+    <button id="btn-rapida" type="button">Posizione rapida</button>
+    <button id="btn-ferma" type="button" disabled>Ferma</button>
+  </div>
+
+  <section class="riquadro">
+    <h2>POSIZIONE</h2>
+    <div class="coord" id="coord">—</div>
+    <div class="griglia">
+      <div class="dato"><span>Precisione</span><b id="v-precisione">—</b><i id="n-precisione">&nbsp;</i></div>
+      <div class="dato"><span>Età dell'ultimo punto</span><b id="v-eta">—</b><i id="n-eta">&nbsp;</i></div>
+      <div class="dato"><span>Velocità (SOG)</span><b id="v-sog">—</b><i id="n-sog">&nbsp;</i></div>
+      <div class="dato"><span>Rotta (COG)</span><b id="v-cog">—</b><i id="n-cog">&nbsp;</i></div>
+      <div class="dato"><span>Punti ricevuti</span><b id="v-punti">0</b><i id="n-punti">&nbsp;</i></div>
+      <div class="dato"><span>Intervallo tra punti</span><b id="v-intervallo">—</b><i>&nbsp;</i></div>
+    </div>
+  </section>
+
+  <section class="riquadro">
+    <h2>TRACCIA (NORD IN ALTO)</h2>
+    <div class="fig"><svg id="traccia" role="img" aria-label="Ultime posizioni ricevute"></svg></div>
+    <p class="nota">Punto rosso: ultima posizione. Cerchio: precisione dichiarata dal telefono. Punti grigi: posizioni precedenti.</p>
+  </section>
+
+  <section class="riquadro">
+    <h2>CONTROLLI DEL DISPOSITIVO</h2>
+    <table><tbody id="controlli"></tbody></table>
+  </section>
+
+  <section class="riquadro">
+    <h2>REGISTRO</h2>
+    <ol id="registro"></ol>
+  </section>
+
+  <section class="riquadro">
+    <h2>RAPPORTO DA INVIARE</h2>
+    <button id="btn-rapporto" type="button" style="width:100%">Copia il rapporto</button>
+    <textarea id="rapporto" readonly aria-label="Rapporto diagnostico"></textarea>
+    <p class="nota">Il rapporto contiene la posizione approssimata a circa 100 m, non quella esatta. Nessun dato lascia il telefono: la pagina non invia nulla a nessun server.</p>
+  </section>
+</main>
+
+<script>
+{
+const VERSIONE = "0.1 · 25/11/2026";
+const KN = 1.9438444924406;
+const $ = id => document.getElementById(id);
+$("versione").textContent = "versione " + VERSIONE;
+$("senza-js").remove();
+
+let watchId = null, punti = [], ultimo = null, errori = 0, avviatoIl = null, statoPermesso = "non rilevabile";
+const registro = [];
+
+const ora = t => new Date(t).toLocaleTimeString("it-IT");
+function annota(testo){
+  const primo = registro[0];
+  if (primo && primo.testo === testo) { primo.volte++; primo.t = Date.now(); }
+  else { registro.unshift({t: Date.now(), testo, volte: 1}); if (registro.length > 60) registro.pop(); }
+  $("registro").innerHTML = registro.map(r => "<li><time>" + ora(r.t) + "</time>" + esc(r.testo) + (r.volte > 1 ? " ×" + r.volte : "") + "</li>").join("");
+  aggiornaRapporto();
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function stato(tipo, titolo, testo){
+  $("stato").className = "stato " + tipo;
+  $("stato-titolo").textContent = titolo;
+  $("stato-testo").textContent = testo;
+}
+
+window.addEventListener("error", e => annota("ERRORE DEL PROGRAMMA: " + (e.message || e.type)));
+window.addEventListener("unhandledrejection", e => annota("ERRORE DEL PROGRAMMA: " + (e.reason && e.reason.message || e.reason)));
+
+// ---- Informazioni sul dispositivo ----
+function browser(){
+  const ua = navigator.userAgent, m = (r) => (ua.match(r) || [])[1];
+  let nome = "sconosciuto";
+  if (m(/SamsungBrowser\/([\d.]+)/)) nome = "Samsung Internet " + m(/SamsungBrowser\/([\d.]+)/);
+  else if (m(/Firefox\/([\d.]+)/)) nome = "Firefox " + m(/Firefox\/([\d.]+)/);
+  else if (m(/EdgA?\/([\d.]+)/)) nome = "Edge " + m(/EdgA?\/([\d.]+)/);
+  else if (m(/OPR\/([\d.]+)/)) nome = "Opera " + m(/OPR\/([\d.]+)/);
+  else if (m(/Chrome\/([\d.]+)/)) nome = "Chrome " + m(/Chrome\/([\d.]+)/);
+  else if (m(/Version\/([\d.]+).*Safari/)) nome = "Safari " + m(/Version\/([\d.]+).*Safari/);
+  if (/; wv\)/.test(ua)) nome += " (browser interno di un'altra app)";
+  const so = m(/Android ([\d.]+)/) ? "Android " + m(/Android ([\d.]+)/) : /iPhone|iPad/.test(ua) ? "iOS" : (navigator.platform || "sconosciuto");
+  return {nome, so};
+}
+function righeControlli(){
+  const b = browser();
+  const righe = [
+    ["Sistema", b.so],
+    ["Browser", b.nome],
+    ["Pagina sicura (HTTPS)", window.isSecureContext ? "sì" : "NO: il GPS non può funzionare"],
+    ["Funzione posizione presente", "geolocation" in navigator ? "sì" : "NO"],
+    ["Permesso posizione per questa pagina", statoPermesso],
+    ["Connessione", navigator.onLine ? "in linea" : "non in linea"],
+    ["Schermo (finestra)", innerWidth + " × " + innerHeight + " px · densità " + devicePixelRatio],
+    ["Orientamento", (screen.orientation && screen.orientation.type) || (innerWidth > innerHeight ? "orizzontale" : "verticale")],
+    ["Schermo sempre acceso", "wakeLock" in navigator ? "supportato" : "non supportato"],
+    ["Pagina aperta alle", ora(avvioPagina)]
+  ];
+  return righe;
+}
+function controlli(){
+  const righe = righeControlli();
+  $("controlli").innerHTML = righe.map(r => "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>").join("");
+  return righe;
+}
+const avvioPagina = Date.now();
+const nomiPermesso = {granted: "concesso", prompt: "da chiedere (comparirà la richiesta)", denied: "NEGATO"};
+if (navigator.permissions && navigator.permissions.query) {
+  navigator.permissions.query({name: "geolocation"}).then(p => {
+    const leggi = () => { statoPermesso = nomiPermesso[p.state] || p.state; controlli(); aggiornaRapporto(); };
+    leggi();
+    p.onchange = () => { leggi(); annota("Permesso posizione cambiato: " + statoPermesso); };
+  }).catch(() => {});
+}
+addEventListener("resize", controlli);
+addEventListener("online", controlli); addEventListener("offline", controlli);
+
+// ---- GPS ----
+const suggerimenti = {
+  1: ["Permesso negato",
+      "Di solito su Android: Impostazioni → App → Chrome → Autorizzazioni → Posizione → «Consenti solo mentre l'app è in uso», con «Usa posizione precisa» attivo. Poi in Chrome tocca l'icona a sinistra dell'indirizzo → Autorizzazioni → Posizione → Consenti, e ricarica la pagina."],
+  2: ["Posizione non disponibile",
+      "La localizzazione del telefono potrebbe essere spenta: attivala dalla tendina rapida (icona «Posizione»). Se è attiva, spostati all'aperto, lontano da tetti e muri."],
+  3: ["Ancora nessun punto",
+      "Il tempo d'attesa è scaduto, ma la ricerca continua. All'aperto il primo punto satellitare può richiedere 30–60 secondi."]
+};
+function erroreGps(err, origine){
+  errori++;
+  const s = suggerimenti[err.code] || ["Errore sconosciuto", "Codice " + err.code];
+  annota(origine + ": " + s[0] + " (codice " + err.code + (err.message ? ", «" + err.message + "»" : "") + ")");
+  if (err.code === 1) { ferma(false); stato("errore", "GPS: " + s[0], s[1]); }
+  else if (!ultimo) stato(err.code === 3 ? "cerca" : "errore", "GPS: " + s[0], s[1]);
+  aggiornaRapporto();
+}
+function puntoRicevuto(pos, origine){
+  const c = pos.coords, adesso = Date.now();
+  const p = {lat: c.latitude, lon: c.longitude, acc: c.accuracy, vel: c.speed, rotta: c.heading,
+             alt: c.altitude, t: pos.timestamp, ricevuto: adesso, origine};
+  if (!punti.length) annota("Primo punto ricevuto (" + origine + ") dopo " + ((adesso - (avviatoIl || adesso)) / 1000).toFixed(1) + " s · precisione " + Math.round(c.accuracy) + " m");
+  else if (punti.length === 1 || punti.length % 25 === 0) annota("Punto n. " + (punti.length + 1) + " · precisione " + Math.round(c.accuracy) + " m");
+  punti.push(p); if (punti.length > 300) punti.shift();
+  ultimo = p;
+  stato("ok", "GPS acquisito", origine === "rapida" ? "Posizione rapida ricevuta (può essere approssimata)." : "Il telefono sta inviando posizioni.");
+  disegnaValori(); disegnaTraccia(); aggiornaRapporto();
+}
+function avvia(){
+  if (!("geolocation" in navigator)) { stato("errore", "GPS non disponibile", "Questo browser non offre la funzione di posizione."); annota("Funzione posizione assente"); return; }
+  if (!window.isSecureContext) { stato("errore", "Pagina non sicura", "Il GPS funziona solo su indirizzi https://"); annota("Pagina non sicura"); return; }
+  if (watchId !== null) return;
+  avviatoIl = Date.now();
+  stato("cerca", "Ricerca posizione…", "Se compare la richiesta del permesso, rispondi «Consenti». Il primo punto può richiedere fino a un minuto.");
+  annota("Avvio GPS ad alta precisione");
+  try {
+    watchId = navigator.geolocation.watchPosition(p => puntoRicevuto(p, "GPS"), e => erroreGps(e, "GPS"),
+      {enableHighAccuracy: true, maximumAge: 0, timeout: 30000});
+  } catch (e) { annota("Impossibile avviare il GPS: " + e.message); stato("errore", "Impossibile avviare il GPS", e.message); return; }
+  $("btn-avvia").disabled = true; $("btn-avvia").textContent = "GPS attivo"; $("btn-ferma").disabled = false;
+}
+function rapida(){
+  if (!("geolocation" in navigator)) return;
+  annota("Richiesta posizione rapida (precisione normale)");
+  if (!avviatoIl) avviatoIl = Date.now();
+  if (!ultimo) stato("cerca", "Ricerca posizione rapida…", "Può arrivare dalla rete cellulare o dal Wi-Fi, quindi meno precisa.");
+  navigator.geolocation.getCurrentPosition(p => puntoRicevuto(p, "rapida"), e => erroreGps(e, "Rapida"),
+    {enableHighAccuracy: false, maximumAge: 10000, timeout: 20000});
+}
+function ferma(conNota = true){
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+  $("btn-avvia").disabled = false; $("btn-avvia").textContent = "Avvia GPS"; $("btn-ferma").disabled = true;
+  if (conNota) { annota("GPS fermato"); stato("", "GPS fermo", ultimo ? "Ultima posizione conservata qui sotto." : "Premi «Avvia GPS»."); }
+}
+$("btn-avvia").addEventListener("click", avvia);
+$("btn-rapida").addEventListener("click", rapida);
+$("btn-ferma").addEventListener("click", () => ferma(true));
+
+// ---- Visualizzazione ----
+const fmtCoord = (v, lat) => Math.abs(v).toFixed(5) + "° " + (lat ? (v >= 0 ? "N" : "S") : (v >= 0 ? "E" : "W"));
+function disegnaValori(){
+  const p = ultimo;
+  if (!p) return;
+  $("coord").textContent = fmtCoord(p.lat, true) + "  " + fmtCoord(p.lon, false);
+  $("v-precisione").textContent = Number.isFinite(p.acc) ? "± " + Math.round(p.acc) + " m" : "—";
+  $("n-precisione").textContent = !Number.isFinite(p.acc) ? "" : p.acc <= 15 ? "buona (satelliti)" : p.acc <= 50 ? "discreta" : "scarsa: probabilmente rete o Wi-Fi";
+  const vOk = Number.isFinite(p.vel), rOk = Number.isFinite(p.rotta);
+  $("v-sog").textContent = vOk ? (p.vel * KN).toFixed(2) + " kn" : "—";
+  $("n-sog").textContent = vOk ? "dal telefono" : "non fornita (normale da fermi)";
+  $("v-cog").textContent = rOk ? String(Math.round(p.rotta) % 360).padStart(3, "0") + "°" : "—";
+  $("n-cog").textContent = rOk ? "dal telefono" : "non fornita (normale da fermi)";
+  $("v-punti").textContent = String(punti.length);
+  $("n-punti").textContent = errori ? errori + " errori" : "nessun errore";
+  if (punti.length > 1) {
+    const n = Math.min(10, punti.length - 1), a = punti[punti.length - 1 - n], b = punti[punti.length - 1];
+    $("v-intervallo").textContent = ((b.ricevuto - a.ricevuto) / n / 1000).toFixed(1) + " s";
+  }
+  aggiornaEta();
+}
+function aggiornaEta(){
+  if (!ultimo) return;
+  const eta = (Date.now() - ultimo.ricevuto) / 1000;
+  $("v-eta").textContent = eta < 60 ? eta.toFixed(0) + " s" : Math.floor(eta / 60) + " min";
+  const scarto = (ultimo.ricevuto - ultimo.t) / 1000;
+  $("n-eta").innerHTML = Math.abs(scarto) > 5
+    ? '<span class="avviso">orologio del punto sfasato di ' + esc(scarto.toFixed(0)) + " s</span>"
+    : (eta > 12 ? "non aggiornata" : "aggiornata");
+}
+setInterval(() => { aggiornaEta(); aggiornaRapporto(); }, 1000);
+
+function disegnaTraccia(){
+  const s = $("traccia"), W = s.clientWidth, H = s.clientHeight;
+  if (!W || !H) return;
+  let out = "";
+  if (!ultimo) {
+    out = '<text x="' + W/2 + '" y="' + H/2 + '" fill="#bdbdbd" font-size="15" text-anchor="middle">Nessuna posizione ancora</text>';
+    s.innerHTML = out; return;
+  }
+  const R = 6371008.8, rad = d => d * Math.PI / 180, o = ultimo;
+  const xy = p => ({x: rad(p.lon - o.lon) * R * Math.cos(rad(o.lat)), y: rad(p.lat - o.lat) * R});
+  const pts = punti.map(xy);
+  let estensione = Math.max(30, (o.acc || 0) * 1.15);
+  for (const q of pts) estensione = Math.max(estensione, Math.abs(q.x) * 1.1, Math.abs(q.y) * 1.1);
+  const k = (Math.min(W, H) / 2 - 18) / estensione, cx = W / 2, cy = H / 2;
+  const P = q => ({x: cx + q.x * k, y: cy - q.y * k});
+  out += '<line x1="' + cx + '" y1="10" x2="' + cx + '" y2="' + (H - 10) + '" stroke="#2c2c2c"/><line x1="10" y1="' + cy + '" x2="' + (W - 10) + '" y2="' + cy + '" stroke="#2c2c2c"/>';
+  out += '<text x="' + (cx + 8) + '" y="22" fill="#fff" font-size="13" font-weight="700">N</text>';
+  if (Number.isFinite(o.acc)) out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + Math.max(4, o.acc * k) + '" fill="#ff0000" fill-opacity=".12" stroke="#ff0000" stroke-width="1.5"/>';
+  for (let i = 0; i < pts.length - 1; i++) { const q = P(pts[i]); out += '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="2.5" fill="#9a9a9a"/>'; }
+  out += '<circle cx="' + cx + '" cy="' + cy + '" r="8" fill="#ff0000" stroke="#fff" stroke-width="2.5"/>';
+  const scelte = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000], obiettivo = W * 0.28;
+  const m = scelte.reduce((a, b) => Math.abs(b * k - obiettivo) < Math.abs(a * k - obiettivo) ? b : a);
+  const L = m * k;
+  out += '<path d="M14 ' + (H - 14) + ' v-6 h' + L.toFixed(1) + ' v6" fill="none" stroke="#fff" stroke-width="2"/><text x="' + (14 + L / 2) + '" y="' + (H - 26) + '" fill="#fff" font-size="12" text-anchor="middle">' + (m >= 1000 ? m / 1000 + " km" : m + " m") + "</text>";
+  s.innerHTML = out;
+}
+const osservatore = new ResizeObserver(disegnaTraccia);
+osservatore.observe($("traccia"));
+
+// ---- Rapporto ----
+function aggiornaRapporto(){
+  if (document.activeElement === $("rapporto")) return;
+  const righe = ["RR Regatta · Diagnostica GPS " + VERSIONE, "Data: " + new Date().toLocaleString("it-IT"), ""];
+  for (const r of righeControlli()) righe.push(r[0] + ": " + r[1]);
+  righe.push("", "GPS: " + (watchId !== null ? "attivo" : "fermo") + " · stato: " + $("stato-titolo").textContent);
+  if (ultimo) {
+    righe.push("Punti ricevuti: " + punti.length + " · errori: " + errori);
+    righe.push("Ultimo punto: " + ultimo.lat.toFixed(3) + ", " + ultimo.lon.toFixed(3) + " (arrotondato) · precisione " + Math.round(ultimo.acc) + " m · origine " + ultimo.origine);
+    righe.push("Velocità grezza: " + ultimo.vel + " · rotta grezza: " + ultimo.rotta + " · età " + ((Date.now() - ultimo.ricevuto) / 1000).toFixed(0) + " s · sfasamento orologio " + ((ultimo.ricevuto - ultimo.t) / 1000).toFixed(1) + " s");
+    if (avviatoIl) righe.push("Primo punto dopo: " + ((punti[0].ricevuto - avviatoIl) / 1000).toFixed(1) + " s");
+  } else righe.push("Nessun punto ricevuto · errori: " + errori);
+  righe.push("", "Registro (dal più recente):");
+  for (const r of registro.slice(0, 15)) righe.push(ora(r.t) + " " + r.testo + (r.volte > 1 ? " ×" + r.volte : ""));
+  righe.push("", "Browser: " + navigator.userAgent);
+  $("rapporto").value = righe.join("\n");
+}
+$("btn-rapporto").addEventListener("click", async () => {
+  aggiornaRapporto();
+  try { await navigator.clipboard.writeText($("rapporto").value); $("btn-rapporto").textContent = "Copiato: incollalo nella chat"; }
+  catch { $("rapporto").focus(); $("rapporto").select(); $("btn-rapporto").textContent = "Seleziona il testo qui sotto e copialo"; }
+  setTimeout(() => $("btn-rapporto").textContent = "Copia il rapporto", 4000);
+});
+
+controlli();
+disegnaTraccia();
+annota("Pagina caricata, versione " + VERSIONE);
+}
+</script>
+</body>
+</html>
