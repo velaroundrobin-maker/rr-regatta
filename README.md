@@ -4,6 +4,14 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.10
+
+- Taratura del vento in due modi: prua al vento a motore o bolina stretta (mure a sinistra o a dritta); con le due mure il vento è la bisettrice e l'angolo di virata è misurato. Le altre andature sono indicazioni dell'equipaggio. Tolto il vento «a mano».
+- Polari record (media più alta tenuta per 30 s, tutte le uscite) e polari della sessione (l'ultima uscita), con confronto e ★ per i record nuovi; «% del record» sugli strumenti. Per le polari valgono la taratura a motore e la bolina sulle due mure.
+- Diagramma polare più leggero: cerchi ogni 2 nodi (4 sopra i 10), raggi ogni 30°.
+- Rapporto PDF dell'uscita (File, registro e impostazioni; scheda Polari): riepilogo, traccia, velocità nel tempo, prove con tempi dei tratti, vento, vele, polari della sessione e record, registro. Libreria jsPDF 2.5.2 (MIT) in `lib/`.
+- Guida riscritta: che cosa fa l'app, sviluppi futuri (sensori nostri), Navigazione, Regata, Allenamento, Polari, timer, rapporto, dati e impostazioni.
+
 ## Versione 0.9.2
 
 - Mappa senza sovrapposizioni: colonna dei comandi a destra e posizione sotto la mappa, fuori dal disegno.

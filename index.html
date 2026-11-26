@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="./app.css?v=0.9.2">
+<link rel="stylesheet" href="./app.css?v=0.10">
 <title>RR Regatta</title>
 </head>
 <body>
@@ -97,8 +97,8 @@
     <section class="prossima striscia-polari" id="striscia-polari" hidden aria-label="Polari">
       <div class="prossima-dati">
         <div><span>ANGOLO VENTO</span><b id="sp-twa">—</b></div>
-        <div><span>POLARE</span><b id="sp-pol">—</b></div>
-        <div><span>% POLARE</span><b id="sp-perc">—</b></div>
+        <div><span>RECORD</span><b id="sp-pol">—</b></div>
+        <div><span>% RECORD</span><b id="sp-perc">—</b></div>
       </div>
       <small class="pr-nota" id="sp-stato">—</small>
     </section>
@@ -249,17 +249,13 @@
     <section class="blocco" id="sez-taratura">
       <h2>TARATURA DEL VENTO</h2>
       <p class="tar-stato" id="tar-stato">—</p>
-      <button type="button" class="principale largo" id="tar-motore">Prua al vento a motore: memorizza</button>
-      <p class="aiuto">Con il motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi.</p>
+      <button type="button" class="principale largo" id="tar-motore">Prua al vento a motore</button>
+      <p class="aiuto">A motore: prua esattamente al vento, rotta costante per una decina di secondi, poi premi.</p>
       <div class="riga-pulsanti">
-        <button type="button" class="secondario" id="tar-dritta">Bolina mure a dritta</button>
-        <button type="button" class="secondario" id="tar-sinistra">Bolina mure a sinistra</button>
+        <button type="button" class="secondario" id="tar-sinistra">Bolina stretta mure a sinistra</button>
+        <button type="button" class="secondario" id="tar-dritta">Bolina stretta mure a dritta</button>
       </div>
-      <p class="aiuto">Facoltativo: in bolina stretta, rotta costante, premi la mura su cui sei, poi l'altra. Misura l'angolo di virata per le lay-line.</p>
-      <div class="riga-mano">
-        <label>Vento a mano <input id="tar-mano" type="number" inputmode="numeric" min="0" max="359" placeholder="gradi"></label>
-        <button type="button" class="secondario" id="tar-mano-ok">Imposta</button>
-      </div>
+      <p class="aiuto">A vela: in bolina stretta ben regolata, rotta costante, premi la mura su cui sei. Dopo la virata premi l'altra: il vento diventa più preciso e l'app misura l'angolo di virata.</p>
       <button type="button" class="collegamento-testo" id="tar-azzera">Azzera la taratura</button>
     </section>
     <section class="blocco" id="sez-linea">
@@ -315,7 +311,7 @@
       <div class="vento-griglia">
         <div><span>Angolo dal vento</span><b id="pol-twa">—</b><small id="pol-twa-nota">&nbsp;</small></div>
         <div><span>Velocità</span><b id="pol-sog">—</b><small>nodi sul fondo</small></div>
-        <div><span>Polare</span><b id="pol-rif">—</b><small id="pol-rif-nota">&nbsp;</small></div>
+        <div><span>Record</span><b id="pol-rif">—</b><small id="pol-rif-nota">&nbsp;</small></div>
       </div>
     </section>
 
@@ -349,6 +345,11 @@
 
     <section class="blocco">
       <h2>POLARE</h2>
+      <div class="segmento" role="group" aria-label="Quale polare" id="pol-tipo">
+        <button type="button" data-polare="record" aria-pressed="true">Record</button>
+        <button type="button" data-polare="sessione" aria-pressed="false">Sessione</button>
+      </div>
+      <p class="aiuto" id="pol-tipo-nota">—</p>
       <p class="sotto-titolo">Vento vero</p>
       <div class="scelte classi" id="pol-classi"></div>
       <label class="campo-scelta">Vele <select id="pol-config"></select></label>
@@ -356,7 +357,7 @@
       <p class="tar-stato" id="pol-ottimi">—</p>
       <button type="button" class="secondario largo" id="pol-usa-virata" hidden>Usa questo angolo di virata in regata</button>
       <table class="tabella-polare" id="pol-tabella"></table>
-      <p class="aiuto">Velocità sul fondo (80° percentile). Servono 30 secondi stabili per casella; con meno dati il valore è tra parentesi. D/S: punti per mura.</p>
+      <p class="aiuto">Velocità sul fondo: la media più alta tenuta per 30 secondi, così le punte dell'onda non contano. Tra parentesi: meno di 30 secondi di dati. D/S: punti per mura.</p>
     </section>
 
     <section class="blocco">
@@ -371,7 +372,8 @@
         <button type="button" class="secondario" id="pol-importa">Importa</button>
         <input type="file" id="pol-file" accept=".json,application/json" hidden>
       </div>
-      <p class="aiuto">Esporta: tutti i punti. Tabella: per il foglio di calcolo. Importa: aggiunge i punti di un altro file. Le polari restano anche dopo un reset.</p>
+      <p class="aiuto">Esporta: tutti i punti. Tabella: il record per il foglio di calcolo. Importa: aggiunge i punti di un altro file. Le polari restano anche dopo un reset.</p>
+      <button type="button" class="principale largo" data-rapporto>Rapporto PDF dell'uscita</button>
       <button type="button" class="secondario largo" id="pol-scarta">Scarta gli ultimi 5 minuti</button>
       <button type="button" class="collegamento-testo" id="pol-azzera">Cancella tutte le polari</button>
     </section>
@@ -380,17 +382,14 @@
   <!-- ALTRO -->
   <main class="vista scorre" id="vista-altro" hidden>
     <section class="blocco">
-      <h2>SCHERMO E MAPPA</h2>
-      <button type="button" class="interruttore" id="imp-intero" aria-pressed="true">Schermo intero: sì</button>
-      <div class="impostazioni"><label>Chiedi di confermare l'andatura ogni <select id="imp-promemoria"><option value="0">mai</option><option value="3">3 minuti</option><option value="5">5 minuti</option><option value="10">10 minuti</option></select></label></div>
-      <p class="aiuto">Solo con la barca in movimento e fuori dalla bolina stretta.</p>
-      <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
-      <p class="aiuto">A schermo spento il GPS si ferma.</p>
-      <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia sulla mappa: no</button>
+      <h2>RAPPORTO DELL'USCITA</h2>
+      <label class="campo-scelta">Uscita <select id="rap-uscita"></select></label>
+      <button type="button" class="principale largo" data-rapporto>Scarica il rapporto PDF</button>
+      <p class="aiuto">Traccia, velocità, prove, vento, vele e polari dell'uscita scelta. Più di 2 ore senza dati separano due uscite.</p>
     </section>
     <section class="blocco">
-      <h2>SESSIONE</h2>
-      <p class="aiuto">Tutto si salva da solo sul telefono. Esporta un file per conservarlo.</p>
+      <h2>DATI SALVATI</h2>
+      <p class="aiuto">Tutto si salva da solo sul telefono. Esporta: un file con tutti i dati (campo, traccia, registro, polari), da conservare o da mandarci. Importa: riapre un file esportato.</p>
       <div class="riga-pulsanti">
         <button type="button" class="secondario" id="btn-esporta">Esporta</button>
         <button type="button" class="secondario" id="btn-importa">Importa</button>
@@ -398,6 +397,15 @@
       </div>
       <button type="button" class="reset largo" id="btn-nuova">Reset generale</button>
       <button type="button" class="secondario largo" id="btn-annulla-reset" hidden>Annulla l'ultimo reset</button>
+    </section>
+    <section class="blocco">
+      <h2>SCHERMO E MAPPA</h2>
+      <button type="button" class="interruttore" id="imp-intero" aria-pressed="true">Schermo intero: sì</button>
+      <div class="impostazioni"><label>Chiedi di confermare l'andatura ogni <select id="imp-promemoria"><option value="0">mai</option><option value="3">3 minuti</option><option value="5">5 minuti</option><option value="10">10 minuti</option></select></label></div>
+      <p class="aiuto">Solo con la barca in movimento e fuori dalla bolina stretta.</p>
+      <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
+      <p class="aiuto">A schermo spento il GPS si ferma.</p>
+      <button type="button" class="interruttore" id="btn-traccia" aria-pressed="false">Traccia sulla mappa: no</button>
     </section>
     <section class="blocco">
       <h2>REGISTRO</h2>
@@ -413,6 +421,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.9.2"></script>
+<script type="module" src="./js/app.mjs?v=0.10"></script>
 </body>
 </html>

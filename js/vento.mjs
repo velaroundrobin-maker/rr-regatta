@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.9.2";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.10";
 
 export const MURE = ["dritta", "sinistra"];
 
@@ -12,6 +12,9 @@ export const MURE = ["dritta", "sinistra"];
 //   reale di ciascuna mura (anche asimmetrico, per corrente e scarroccio);
 // - una coppia di boline (dritta e sinistra) registrata più di 20 minuti dopo il vento a motore diventa il nuovo
 //   riferimento: il vento è la bisettrice e ogni mura sta a metà dell'angolo di virata misurato.
+// - con il vento dalla bolina stretta dichiarata (metodo «bolina»), appena c'è la coppia di boline (entrambe entro
+//   20 minuti l'una dall'altra e non più vecchie del riferimento) vale la bisettrice: non dipende più dall'angolo
+//   di bolina presunto.
 // L'ora del riferimento («t») è quella della lettura più vecchia che lo compone: serve a sapere quanto è aggiornato.
 export const FINESTRA_TARATURA_MS = 20 * 60000;
 export function taratura(cal) {
@@ -20,7 +23,9 @@ export function taratura(cal) {
   const tOk = x => Number.isFinite(x?.t);
   const coppia = r.dritta && r.sinistra
     ? {dir: circularMean([r.dritta.cog, r.sinistra.cog]), t: tOk(r.dritta) && tOk(r.sinistra) ? Math.min(r.dritta.t, r.sinistra.t) : null} : null;
-  const coppiaNuova = coppia && (!ini || (Number.isFinite(coppia.t) && tOk(ini) && coppia.t > ini.t + F));
+  const coppiaDaBolina = coppia && ini?.metodo === "bolina" && tOk(r.dritta) && tOk(r.sinistra) && tOk(ini) &&
+    Math.abs(r.dritta.t - r.sinistra.t) <= F && Math.max(r.dritta.t, r.sinistra.t) >= ini.t && coppia.t >= ini.t - F;
+  const coppiaNuova = coppia && (!ini || coppiaDaBolina || (Number.isFinite(coppia.t) && tOk(ini) && coppia.t > ini.t + F));
   if (coppiaNuova) {
     const s = delta(r.sinistra.cog, coppia.dir), ok = s >= 15 && s <= 80;
     const m = ok ? s : def;

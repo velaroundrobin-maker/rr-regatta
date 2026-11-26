@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero, classeVento, valutaPunto, polare, ottimi,
-  velocitaPolare, tabellaCsv, unisciPolari, MIN_PUNTI} from "../js/polari.mjs";
+  velocitaPolare, tabellaCsv, unisciPolari, MIN_PUNTI, migliorTenuta, classiConDati} from "../js/polari.mjs";
 
 test("nomi delle vele", () => {
   assert.equal(nomeVele(chiaveVele({prua: "J2", randa: "1 mano", portante: "Nessuna"})), "J2 · randa 1 mano");
@@ -32,6 +32,8 @@ test("punto accettato solo con rotta e velocità stabili da 20 secondi", () => {
   assert.match(valutaPunto({...base, vento: null, fixes: fx(() => 90, () => 6)}).motivo, /intensità/);
   assert.match(valutaPunto({...base, ultimoCambioVele: adesso - 10000, fixes: fx(() => 90, () => 6)}).motivo, /vele appena cambiate/);
   assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "andatura"}, fixes: fx(() => 90, () => 6)}).motivo, /taratura a motore/);
+  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "bolina"}, fixes: fx(() => 90, () => 6)}).motivo, /due mure/);
+  assert.equal(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "boline"}, fixes: fx(() => 90, () => 6)}).ok, true);
 });
 
 // Barca di prova con una polare nota: v = 7·sin(...) semplificata.
@@ -47,7 +49,7 @@ function polariFinte() {
   return p;
 }
 test("polare: percentile per casella, conteggi per mura, angoli ottimi", () => {
-  const p = polariFinte(), punti = polare(p, 10, "tutte");
+  const p = polariFinte(), punti = polare(p, 10, "tutte", {statistica: 80});
   const a60 = punti.find(q => q.twa === 60);
   assert.equal(a60.n, 60); assert.equal(a60.nS, 30); assert.equal(a60.nD, 30); assert.equal(a60.valido, true);
   assert.ok(a60.v > vera(60) && a60.v < vera(60) + 0.25, "80° percentile poco sopra la media: " + a60.v);
@@ -62,10 +64,10 @@ test("polare: configurazione migliore per angolo e caselle con pochi punti", () 
   const k2 = indiceVele(p, {prua: "Nessuna", randa: "Piena", portante: "Gennaker"});
   for (let i = 0; i < MIN_PUNTI; i++) p.campioni.push([1e6 + i * 2000, 150, vera(150) + 1, 10, k2]);
   for (let i = 0; i < 5; i++) p.campioni.push([2e6 + i * 2000, 120, 9, 10, k2]);
-  const punti = polare(p, 10, "tutte");
+  const punti = polare(p, 10, "tutte", 80);
   assert.equal(punti.find(q => q.twa === 150).config, k2);
   assert.equal(punti.find(q => q.twa === 120).config, 0, "5 punti non bastano a battere una casella valida");
-  assert.equal(polare(p, 10, k2).find(q => q.twa === 120).valido, false);
+  assert.equal(polare(p, 10, k2, 80).find(q => q.twa === 120).valido, false);
 });
 test("tabella per il foglio di calcolo", () => {
   const csv = tabellaCsv(polariFinte());
@@ -89,4 +91,27 @@ test("vele di prua e verifica delle vele salvate", () => {
   assert.deepEqual(PRUA, ["J1", "J2", "J3", "Tormentina"]);
   const p = verificaPolari({...nuovePolari(), vele: {prua: "Genoa 1", randa: "Piena", portante: "Gennaker"}});
   assert.equal(p.vele.prua, "J1"); assert.equal(p.vele.portante, "Gennaker");
+});
+
+test("record: velocità media più alta tenuta per 30 secondi, senza le punte", () => {
+  // 40 punti a 2 s: 6 kn, con una punta di 9 kn (un'onda) e un tratto di 25 s a 7 kn.
+  const lista = Array.from({length: 40}, (_, i) => [i * 2000, 60, i === 5 ? 9 : i >= 20 && i <= 31 ? 7 : 6, 10, 0]);
+  const r = migliorTenuta(lista);
+  assert.ok(Math.abs(r.v - 7) < 1e-9, "tratto a 7 kn: " + r.v); assert.equal(r.t, 40000);
+  assert.equal(migliorTenuta(lista.slice(0, 8)), null, "14 secondi di punti non bastano");
+  // Una pausa spezza la sequenza.
+  const spezzata = [...lista.slice(0, 8), ...lista.slice(8, 16).map(c => [c[0] + 60000, ...c.slice(1)])];
+  assert.equal(migliorTenuta(spezzata), null);
+});
+test("polare record e polare della sessione", () => {
+  const p = polariFinte(), tutti = polare(p, 10, "tutte");
+  const a90 = tutti.find(q => q.twa === 90);
+  assert.equal(a90.valido, true); assert.ok(a90.v >= vera(90) - 0.05 && a90.v < vera(90) + 0.2, "record a 90°: " + a90.v);
+  // Una seconda uscita, più lenta, solo al traverso.
+  const t0 = 1e7;
+  for (let i = 0; i < 20; i++) p.campioni.push([t0 + i * 2000, 90, vera(90) - 1, 10, 0]);
+  const sessione = polare(p, 10, "tutte", {da: t0});
+  assert.equal(sessione.length, 1); assert.ok(Math.abs(sessione[0].v - (vera(90) - 1)) < 1e-9);
+  assert.ok(Math.abs(polare(p, 10, "tutte").find(q => q.twa === 90).v - a90.v) < 1e-9, "il record non cambia");
+  assert.deepEqual(classiConDati(p, {da: t0}), [10]); assert.deepEqual(classiConDati(p, {da: t0 + 1e6}), []);
 });

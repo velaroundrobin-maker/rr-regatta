@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
   aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina} from "../js/vento.mjs";
-import {move, bearing, norm} from "../js/engine.mjs";
+import {move, bearing, norm, delta} from "../js/engine.mjs";
 
 const vicino = (a, b, tol = 0.5) => assert.ok(Math.abs(((a - b + 540) % 360) - 180) <= tol, a + " ≠ " + b);
 
@@ -165,4 +165,16 @@ test("vento dall'andatura dichiarata, coerente con l'andatura mostrata", () => {
     const cog = 77, w = ventoDaAndatura(cog, nome, mura, 42), a = andatura(cog, w);
     assert.equal(a.nome, nome, nome + " " + mura); assert.equal(a.mura, mura);
   }
+});
+
+test("taratura dalla bolina stretta dichiarata: una mura usa l'angolo presunto, la coppia dà la bisettrice", () => {
+  const T = 1e9, min = 60000;
+  const una = taratura({iniziale: {dir: 2, metodo: "bolina", t: T}, rif: {dritta: {cog: 317, t: T}}, angoloVirata: 90});
+  assert.equal(una.dir, 2); assert.equal(una.fonte, "bolina"); assert.equal(una.misurato, false);
+  const due = taratura({iniziale: {dir: 2, metodo: "bolina", t: T}, rif: {dritta: {cog: 317, t: T}, sinistra: {cog: 41, t: T + 6 * min}}, angoloVirata: 90});
+  assert.equal(due.fonte, "boline"); assert.ok(Math.abs(delta(due.dir, 359)) < 0.01, "bisettrice 359°: " + due.dir);
+  assert.equal(due.misurato, true); assert.ok(Math.abs(due.angoloVirata - 84) < 0.01);
+  // Boline troppo lontane nel tempo: resta la bolina dichiarata.
+  const lontane = taratura({iniziale: {dir: 2, metodo: "bolina", t: T + 30 * min}, rif: {dritta: {cog: 317, t: T + 30 * min}, sinistra: {cog: 41, t: T}}, angoloVirata: 90});
+  assert.equal(lontane.fonte, "bolina");
 });

@@ -1,17 +1,19 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.9.2";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.9.2";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.9.2";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.10";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.10";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.10";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.9.2";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.9.2";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.9.2";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.10";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva} from "./stato.mjs?v=0.10";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.10";
 import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.9.2";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.10";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.9.2";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.10";
+import {uscite, tempiDati} from "./rapporto.mjs?v=0.10";
+import {svgPolare} from "./grafici.mjs?v=0.10";
 
-const VERSIONE = "0.9.2";
+const VERSIONE = "0.10";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -19,8 +21,9 @@ const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "
 const ora = t => new Date(t).toLocaleTimeString("it-IT");
 const etaTesto = ms => ms < 90000 ? "adesso" : Math.round(ms / 60000) + " min fa";
 // «tarato» riferito al vento, «tarata» riferito alla direzione.
-const fonteVento = (t, femminile = false) => { const o = femminile ? "a" : "o"; return t.fonte === "boline" ? "misurat" + o + " con le due boline" : t.fonte === "a mano" ? "inserit" + o + " a mano" : t.fonte === "andatura" ? "stimat" + o + " dall'andatura" : "tarat" + o + " a motore"; };
+const fonteVento = (t, femminile = false) => { const o = femminile ? "a" : "o"; return t.fonte === "boline" ? "tarat" + o + " di bolina sulle due mure" : t.fonte === "bolina" ? "tarat" + o + " di bolina stretta" : t.fonte === "a mano" ? "inserit" + o + " a mano" : t.fonte === "andatura" ? "stimat" + o + " dall'andatura" : "tarat" + o + " a motore"; };
 const oraBreve = t => new Date(t).toLocaleTimeString("it-IT", {hour: "2-digit", minute: "2-digit"});
+const dataOra = t => new Date(t).toLocaleDateString("it-IT", {day: "2-digit", month: "2-digit"}) + ", " + oraBreve(t);
 
 // Errori del programma sempre visibili: niente più schermate mute.
 function mostraErrore(testo) { const el = $("avviso-errore"); el.textContent = "Errore del programma: " + testo; el.hidden = false; }
@@ -202,33 +205,32 @@ function taraMotore() {
   avvisa("Vento di riferimento registrato: " + angolo(c) + "." + (st.vista === "vista-polari" ? " Quando navighi a vela, riavvia la registrazione." : ""));
   modificato();
 }
+// Taratura di bolina stretta dichiarata: vento = rotta ∓ angolo di bolina. Dichiarata su tutte e due le mure,
+// il vento diventa la bisettrice delle due rotte e l'angolo di virata è misurato (vedi taratura() in vento.mjs).
 function taraBolina(mura) {
-  const c = rottaPerTaratura(); if (c === null) return;
-  const t = tar();
-  if (t.dir !== null) {
-    const ang = Math.abs(delta(c, t.dir)), m = muraDa(c, t.dir);
-    if (ang < 15 || ang > 80) { avvisa("La rotta " + angolo(c) + " è a " + Math.round(ang) + "° dal vento di riferimento " + angolo(t.dir) + ": non sembra una bolina stretta. Controlla il vento o la rotta."); return; }
-    if (m !== mura && !confirm("Con il vento a " + angolo(t.dir) + " la rotta " + angolo(c) + " risulta mure a " + m + ". Registrarla comunque come mure a " + mura + "?")) return;
-  }
-  s.vento.rif[mura] = {cog: Math.round(c), t: Date.now()};
-  s.vento.bolina = true;
+  const c = rottaPerTaratura(8); if (c === null) return;
+  const adesso = Date.now(), t = tar(), sv = statoVento(adesso), altra = mura === "dritta" ? "sinistra" : "dritta";
+  const angoloBolina = Number.isFinite(t.off?.[mura]) ? Math.abs(t.off[mura]) : (s.barca.angoloVirata || 90) / 2;
+  const nuovo = ventoDaAndatura(c, "Bolina stretta", mura, angoloBolina);
+  const prima = Number.isFinite(sv.medio) ? sv.medio : t.dir;
+  s.vento.rif[mura] = {cog: Math.round(c), t: adesso};
+  let msg;
+  if (prima === null || Math.abs(delta(nuovo, prima)) > 10) {
+    s.vento.iniziale = {dir: Math.round(nuovo), metodo: "bolina", mura, t: adesso};
+    s.vento.rif[altra] = null; // la bolina sull'altra mura era con il vento di prima
+    s.vento.campioni = []; s.vento.rotazione = null; st.allScarso = null;
+    msg = "vento da " + angolo(nuovo) + (prima === null ? "" : " (prima " + angolo(prima) + ")") + ".";
+  } else msg = "il vento resta da " + angolo(prima) + ".";
   const t2 = tar();
-  // Nuovo riferimento dalle due boline: le stime raccolte con quello vecchio non si mescolano con le nuove.
-  if (t2.fonte === "boline" && (t.fonte !== "boline" || Math.abs(delta(t2.dir, t.dir)) > 0.5 || t2.t !== t.t)) { s.vento.campioni = []; s.vento.rotazione = null; st.allScarso = null; }
-  evento("Bolina mure a " + mura + ": " + angolo(c));
-  const nuovo = t2.fonte === "boline" && (t.fonte !== "boline" || t2.t !== t.t);
-  avvisa("Bolina mure a " + mura + " registrata: " + angolo(c) + "." +
-    (nuovo ? " Nuovo vento di riferimento dalle due boline: " + angolo(t2.dir) + ", angolo di virata " + Math.round(t2.angoloVirata) + "°."
-      : t2.misurato && t2.fonte !== "boline" ? " Angolo di virata misurato: " + Math.round(t2.angoloVirata) + "°."
-      : " Ora registra l'altra mura."));
-  modificato();
-}
-function taraMano() {
-  const v = Number($("tar-mano").value);
-  if (!Number.isFinite(v) || $("tar-mano").value === "" || v < 0 || v > 360) { avvisa("Scrivi la direzione da cui viene il vento, da 0 a 359 gradi."); return; }
-  s.vento.iniziale = {dir: norm(Math.round(v)), metodo: "a mano", t: Date.now()};
-  s.vento.campioni = []; s.vento.rotazione = null; $("tar-mano").value = "";
-  evento("Vento impostato a mano: " + angolo(v)); avvisa("Vento di riferimento: " + angolo(v) + "."); modificato();
+  if (t2.fonte === "boline" && t.fonte !== "boline") {
+    s.vento.campioni = []; s.vento.rotazione = null; st.allScarso = null;
+    msg = "con le due mure, vento da " + angolo(t2.dir) + " e angolo di virata " + Math.round(t2.angoloVirata) + "°.";
+  } else if (t2.misurato && !t.misurato) msg += " Angolo di virata misurato: " + Math.round(t2.angoloVirata) + "°.";
+  else if (!s.vento.rif[altra]) msg += " Dopo la virata dichiara l'altra mura: la taratura diventa più precisa.";
+  s.vento.andatura = {nome: "Bolina stretta", mura, t: adesso, cog: Math.round(c)};
+  s.vento.bolina = true; st.poggiataDa = null; st.ultimaRichiesta = adesso; st.andaturaAperta = false;
+  evento("Bolina stretta mure a " + mura + " · rotta " + angolo(c) + " · " + msg);
+  avvisa("Bolina stretta mure a " + mura + ": " + msg); salvaPresto(); disegnaAndatura(); aggiorna();
 }
 function azzeraTaratura() {
   if (!confirm("Azzerare vento di riferimento, boline registrate e stime raccolte?")) return;
@@ -289,6 +291,15 @@ function configScelta() {
   return Number(st.polConfig);
 }
 function classeScelta() { return st.polClasse ?? classeVento(pol.vento?.tws) ?? classiConDati(pol)[0] ?? null; }
+// Sessione: l'uscita in corso o l'ultima (più di 2 ore senza dati separano due uscite).
+let memoUscite = {chiave: "", u: []};
+function elencoUscite() { // calcolato di nuovo solo quando cambiano i dati
+  const ul = a => a?.length ? (Array.isArray(a[a.length - 1]) ? a[a.length - 1][0] : a[a.length - 1].t) : 0;
+  const chiave = [s.registro.length, ul(s.registro), s.traccia.length, ul(s.traccia), pol.campioni.length, ul(pol.campioni), s.registro[0]?.[0], pol.campioni[0]?.[0]].join("|");
+  if (chiave !== memoUscite.chiave) memoUscite = {chiave, u: uscite(tempiDati(s, pol))};
+  return memoUscite.u;
+}
+function finestraSessione() { const u = elencoUscite(); return u.length ? u[u.length - 1] : null; }
 
 function disegnaPolariVivo() {
   const adesso = Date.now(), t = tar(), r = $("pol-registra");
@@ -323,8 +334,12 @@ function disegnaPolari() {
   $("pol-vele-stato").textContent = "A riva: " + nomeVele(chiaveVele(pol.vele)) + ".";
   document.querySelectorAll("[data-metodo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.metodo === st.polMetodo)));
   $("pol-validita").value = String(pol.imp.validitaMin);
-  // Classi di vento e configurazioni con dati.
-  const classe = classeScelta(), conDati = new Set(classiConDati(pol));
+  // Record (tutte le uscite) o sessione (l'ultima uscita); classi di vento e configurazioni con dati.
+  const sess = st.polTipo === "sessione", fin = finestraSessione(), opz = sess ? (fin || {da: Infinity, a: Infinity}) : {};
+  document.querySelectorAll("[data-polare]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.polare === (sess ? "sessione" : "record"))));
+  $("pol-tipo-nota").textContent = sess ? (fin ? "Sessione: " + dataOra(fin.da) + "–" + oraBreve(fin.a) + ". In grigio tratteggiato il record; ★ record fatto in questa uscita." : "Nessuna sessione registrata.")
+    : "Record: le velocità migliori di tutte le uscite.";
+  const classe = classeScelta(), conDati = new Set(classiConDati(pol, opz));
   const classi = [...new Set([...conDati, ...(classeVento(pol.vento?.tws) ? [classeVento(pol.vento.tws)] : [])])].sort((a, b) => a - b);
   html("pol-classi", classi.length ? classi.map(k => '<button type="button" data-classe="' + k + '" aria-pressed="' + (k === classe) + '" class="' + (conDati.has(k) ? "" : "vuota") + '">' + k + " kn</button>").join("")
     : '<span class="aiuto">Nessun dato ancora.</span>');
@@ -332,51 +347,29 @@ function disegnaPolari() {
   html("pol-config", '<option value="attuale">Le vele a riva adesso</option><option value="tutte">Le vele migliori per ogni angolo</option>' +
     cfg.map(i => '<option value="' + i + '">' + esc(nomeVele(pol.configurazioni[i])) + "</option>").join(""));
   $("pol-config").value = ["attuale", "tutte"].includes(st.polConfig) || cfg.includes(Number(st.polConfig)) ? String(st.polConfig) : "attuale";
-  const scelta = configScelta(), punti = classe ? polare(pol, classe, scelta) : [], o = ottimi(punti);
-  disegnaGraficoPolare(punti, o, classe);
+  const scelta = configScelta(), rec = classe ? polare(pol, classe, scelta) : [], punti = sess ? (classe ? polare(pol, classe, scelta, opz) : []) : rec, o = ottimi(punti);
+  disegnaGraficoPolare(punti, o, classe, sess ? rec : null);
   $("pol-ottimi").textContent = !punti.some(q => q.valido) ? "Ancora pochi dati per questa polare."
     : (o.bolina ? "Bolina migliore: " + o.bolina.twa + "° a " + numero(o.bolina.v, 1) + " kn, VMC " + numero(o.bolina.vmg, 1) + " kn (angolo di virata " + 2 * o.bolina.twa + "°). " : "Bolina: dati insufficienti. ") +
       (o.poppa ? "Poppa migliore: " + o.poppa.twa + "° a " + numero(o.poppa.v, 1) + " kn, VMC " + numero(o.poppa.vmg, 1) + " kn." : "Poppa: dati insufficienti.");
   const uv = $("pol-usa-virata");
   uv.hidden = !o.bolina; if (o.bolina) { uv.dataset.angolo = String(2 * o.bolina.twa); uv.textContent = "Usa " + 2 * o.bolina.twa + "° come angolo di virata in regata"; }
-  const tutte = scelta === "tutte";
-  html("pol-tabella", punti.length ? "<tr><th>Angolo</th><th>Velocità</th><th>Punti D/S</th>" + (tutte ? "<th>Vele</th>" : "") + "</tr>" +
-    punti.map(q => '<tr class="' + (!q.valido ? "debole" : q.twa === o.bolina?.twa || q.twa === o.poppa?.twa ? "ottimo" : "") + '"><td>' + q.twa + '°</td><td class="v">' +
-      (q.valido ? numero(q.v, 2) : "(" + numero(q.v, 1) + ")") + "</td><td>" + q.nD + "/" + q.nS + "</td>" + (tutte ? "<td>" + esc(nomeVele(pol.configurazioni[q.config])) + "</td>" : "") + "</tr>").join("") : "");
+  const tutte = scelta === "tutte", vel = q => q.valido ? numero(q.v, 1) : "(" + numero(q.v, 1) + ")";
+  html("pol-tabella", punti.length ? "<tr><th>Angolo</th>" + (sess ? "<th>Sessione</th><th>Record</th>" : "<th>Record</th><th>Data</th>") + "<th>D/S</th>" + (tutte ? "<th>Vele</th>" : "") + "</tr>" +
+    punti.map(q => { const r = rec.find(x => x.twa === q.twa);
+      return '<tr class="' + (!q.valido ? "debole" : q.twa === o.bolina?.twa || q.twa === o.poppa?.twa ? "ottimo" : "") + '"><td>' + q.twa + '°</td><td class="v">' + vel(q) + "</td>" +
+        (sess ? "<td>" + (r ? vel(r) : "—") + (r && q.valido && r.valido && Math.abs(r.v - q.v) < 1e-9 ? "&nbsp;★" : "") + "</td>" : "<td>" + (q.t ? new Date(q.t).toLocaleDateString("it-IT", {day: "2-digit", month: "2-digit"}) : "—") + "</td>") +
+        "<td>" + q.nD + "/" + q.nS + "</td>" + (tutte ? "<td>" + esc(nomeVele(pol.configurazioni[q.config])) + "</td>" : "") + "</tr>"; }).join("") : "");
   const n = pol.campioni.length, ore = n ? (n * 2 / 3600) : 0;
   $("pol-riepilogo").textContent = n ? n + " punti (circa " + numero(ore, 1) + " ore di navigazione utile), " + pol.configurazioni.length + " combinazioni di vele, " +
     (g => g + (g === 1 ? " giorno" : " giorni") + " di uscita.")(new Set(pol.campioni.map(c => new Date(c[0]).toDateString())).size) : "Nessun punto registrato.";
 }
-// Diagramma polare: vento dall'alto, angoli dal vento a destra, cerchi ogni nodo.
-function disegnaGraficoPolare(punti, o, classe) {
+// Diagramma polare (js/grafici.mjs): in rosso la polare scelta; con la sessione, il record in grigio tratteggiato.
+function disegnaGraficoPolare(punti, o, classe, record = null) {
   const svg = $("grafico-polare"), W = svg.clientWidth, H = svg.clientHeight;
   if (!W || !H) return;
-  if (!punti.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#b5b5b5" font-size="14" text-anchor="middle">' + (classe ? "Nessun punto con " + classe + " nodi" : "Inserisci il vento e registra") + "</text>"; return; }
-  const vmax = Math.max(4, Math.ceil(Math.max(...punti.map(q => q.v)) + 0.5)), cy = H / 2, Rg = Math.min(W - 40, H / 2 - 14), cx = Math.max(26, (W - Rg) / 2 - 10);
-  const xy = (a, v) => ({x: cx + Rg * v / vmax * Math.sin(a * Math.PI / 180), y: cy - Rg * v / vmax * Math.cos(a * Math.PI / 180)});
-  let out = "";
-  for (let v = 1; v <= vmax; v++) {
-    const r = Rg * v / vmax;
-    out += '<path d="M' + cx + " " + (cy - r) + "A" + r + " " + r + " 0 0 1 " + cx + " " + (cy + r) + '" fill="none" stroke="' + (v % 2 ? "#262626" : "#3a3a3a") + '"/>';
-    if (v % 2 === 0 || vmax <= 6) out += '<text x="' + (cx - 4) + '" y="' + (cy - r + 4) + '" fill="#b5b5b5" font-size="11" text-anchor="end">' + v + "</text>";
-  }
-  for (const a of [0, 30, 45, 60, 90, 120, 135, 150, 180]) {
-    const p = xy(a, vmax);
-    out += '<path d="M' + cx + " " + cy + "L" + p.x.toFixed(1) + " " + p.y.toFixed(1) + '" stroke="#2c2c2c"/>';
-    if (a && a < 180) { const q = xy(a, vmax * 1.0); out += '<text x="' + Math.min(W - 4, q.x + 3).toFixed(1) + '" y="' + (q.y + (a < 90 ? -2 : 12)).toFixed(1) + '" fill="#b5b5b5" font-size="11" text-anchor="' + (q.x > W - 30 ? "end" : "start") + '">' + a + "°</text>"; }
-  }
-  out += '<text x="' + cx + '" y="11" fill="#fff" font-size="11" text-anchor="middle">VENTO</text>';
-  const validi = punti.filter(q => q.valido);
-  if (validi.length > 1) out += '<path d="' + validi.map((q, i) => { const p = xy(q.twa, q.v); return (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1); }).join("") + '" fill="none" stroke="#ff0000" stroke-width="3" stroke-linejoin="round"/>';
-  for (const q of punti) {
-    const p = xy(q.twa, q.v);
-    out += q.valido ? '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4" fill="#fff"/>' : '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="4" fill="none" stroke="#b5b5b5" stroke-width="1.5"/>';
-  }
-  for (const k of ["bolina", "poppa"]) if (o[k]) {
-    const p = xy(o[k].twa, o[k].v);
-    out += '<path d="M' + cx + " " + cy + "L" + p.x.toFixed(1) + " " + p.y.toFixed(1) + '" stroke="#fff" stroke-dasharray="4 4"/><circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="7" fill="none" stroke="#fff" stroke-width="2"/>';
-  }
-  svg.innerHTML = out;
+  const serie = [...(record ? [{punti: record, colore: "#9a9a9a", spessore: 2, tratteggio: "6 5", segni: false}] : []), {punti, colore: "#ff0000"}];
+  svg.innerHTML = svgPolare({W, H, serie, ottimi: o, tema: "scuro", vuoto: classe ? "Nessun punto con " + classe + " nodi" : "Inserisci il vento e registra"});
 }
 function scaricaFile(nome, testo, tipo) {
   const url = URL.createObjectURL(new Blob([testo], {type: tipo}));
@@ -690,12 +683,13 @@ const passoGps = () => ({titolo: "GPS", testo: "Il GPS non è attivo.",
   azioni: gpsAttivo() ? [] : [["gps", "Accendi il GPS", true]]});
 const passoSchermo = () => ({titolo: "Schermo sempre acceso", testo: "Resta acceso da solo. Tieni il telefono in carica.",
   fatto: !!st.wakeLock, stato: st.wakeLock ? "Lo schermo resta acceso." : "Lo schermo può spegnersi.", azioni: st.wakeLock ? [] : [["schermo", "Tieni acceso lo schermo", true]]});
-function passoVento(perche, conAndatura = true) {
+function passoVento(perche, conBolina = true) {
   const t = tar(), ok = t.dir !== null;
-  return {titolo: "Direzione del vento", testo: perche + " A motore: prua al vento, rotta costante 10 secondi, poi premi." + (conAndatura ? " A vela: dichiara l'andatura." : ""),
+  return {titolo: "Taratura del vento", testo: perche + " A motore: prua al vento, rotta costante 10 secondi, poi premi." + (conBolina ? " A vela: in bolina stretta, rotta costante, premi la mura su cui sei." : ""),
     fatto: ok, stato: t.dir === null ? "Vento non tarato." : "Vento da " + angolo(t.dir) + ", " + fonteVento(t) + (t.t ? " " + etaTesto(Date.now() - t.t) : "") +
       (t.misurato ? " · angolo di virata " + Math.round(t.angoloVirata) + "°." : "."),
-    azioni: [["motore", t.dir === null ? "Prua al vento a motore: memorizza" : "Ritara: prua al vento a motore", t.dir === null], ...(conAndatura ? [["andatura", "Dichiara l'andatura"]] : [])]};
+    azioni: [["motore", t.dir === null ? "Prua al vento a motore" : "Ritara: prua al vento a motore", t.dir === null],
+      ...(conBolina ? [["bolina:sinistra", "Bolina stretta mure a sinistra"], ["bolina:dritta", "Bolina stretta mure a dritta"]] : [])]};
 }
 const passoTimer = testo => ({titolo: "Timer di partenza", facoltativo: true, testo,
   fatto: Number.isFinite(s.timer.zero), stato: !Number.isFinite(s.timer.zero) ? "Timer fermo." : s.timer.zero > Date.now() ? "Timer avviato." : "Partiti.",
@@ -761,12 +755,13 @@ function azioneGuida(cmd) {
   if (a === "gps") { if (!gpsAttivo()) avviaGps(); }
   else if (a === "schermo") { if (!("wakeLock" in navigator)) avvisa("Questo browser non permette di tenere lo schermo acceso."); else { st.vuoleSchermo = true; chiediSchermo().then(aggiorna); } }
   else if (a === "motore") taraMotore();
+  else if (a === "bolina") taraBolina(x);
   else if (a === "andatura") { mostraVista("vista-nav"); apriAndatura(); }
   else if (a === "dritta" || a === "sinistra") taraBolina(a);
   else if (a === "campo") {
     st.tipoAllenamento = x;
     const sv = statoVento(), w = Number.isFinite(sv.medio) ? sv.medio : sv.tar.dir;
-    if (!Number.isFinite(w)) { avvisa("Prima tara la direzione del vento (passo 3), oppure scrivila nella scheda «Campo» → Campo d'allenamento."); return; }
+    if (!Number.isFinite(w)) { avvisa("Prima fai la taratura del vento, oppure scrivi la direzione nella scheda «Campo» → Campo d'allenamento."); return; }
     $("all-vento").value = String(Math.round(w));
     creaAllenamento();
   }
@@ -788,8 +783,8 @@ function azioneGuida(cmd) {
 const SPIEGAZIONE = {
   navigazione: {sintesi: "Strumentazione di bordo: rotta, velocità, vento medio e andatura.", lista: [
     "Rotta e velocità dal GPS.",
-    "Vento: prua al vento a motore, oppure dichiara l'andatura.",
-    "Se il vento gira, dichiara la nuova andatura.",
+    "Taratura del vento: prua al vento a motore o bolina stretta.",
+    "Se il vento gira, l'equipaggio lo indica con «Andatura».",
     "Timer e cronometro."]},
   allenamento: {sintesi: "Esercizi con boe, prove di partenza con timer e cronometro.", lista: [
     "Boe: campi pronti o disegnati sulla mappa (comitato, pin, boe).",
@@ -803,7 +798,7 @@ const SPIEGAZIONE = {
   polari: {sintesi: "Misura delle velocità della barca a ogni angolo dal vento.", lista: [
     "Vento: prua al vento a motore; intensità a barca ferma.",
     "Vele a riva.",
-    "Polare, angoli migliori e % della polare."]}
+    "Polari record e della sessione, angoli migliori, % del record."]}
 };
 function mostraIntro(m) {
   st.modoProposto = m;
@@ -831,6 +826,7 @@ function disegnaAndatura() {
     ANDATURE.map(n => ["sinistra", "dritta"].map(m => '<button type="button" data-andatura="' + n + '|' + m + '"' + (att && att.nome === n && att.mura === m ? ' class="attuale"' : "") + ">" + n + "</button>").join("")).join(""));
 }
 function dichiaraAndatura(nome, mura) {
+  if (nome === "Bolina stretta") return taraBolina(mura); // la bolina stretta dichiarata è una taratura
   // Le andature sono larghe una trentina di gradi: basta una rotta stabile entro ±15° (con l'onda la rotta GPS balla).
   const c = rottaPerTaratura(nome === "Bolina stretta" ? 8 : 15); if (c === null) return;
   const adesso = Date.now(), t = tar(), sv = statoVento(adesso);
@@ -1535,6 +1531,24 @@ function disegnaAltro() {
   if (copia) $("btn-annulla-reset").textContent = "Annulla l'ultimo reset (" + ora(copia.t) + ")";
   disegnaIntero();
   $("registro").innerHTML = s.eventi.slice(0, 40).map(e => "<li><b>" + ora(e.t) + "</b> " + esc(e.testo) + "</li>").join("") || "<li>Nessun evento.</li>";
+  const u = [...elencoUscite()].reverse(), sel = $("rap-uscita"), prima = sel.value;
+  html("rap-uscita", u.length ? u.map(x => '<option value="' + x.da + '">' + dataOra(x.da) + "–" + oraBreve(x.a) + "</option>").join("") : '<option value="">Nessuna uscita registrata</option>');
+  if (u.some(x => String(x.da) === prima)) sel.value = prima;
+}
+// Rapporto PDF (js/pdf.mjs, caricato solo quando serve).
+async function scaricaRapporto(da) {
+  const u = elencoUscite(), f = Number.isFinite(da) ? u.find(x => x.da === da) : u[u.length - 1];
+  if (!f) { avvisa("Nessuna uscita registrata: il rapporto si fa dopo un'uscita con il GPS acceso."); return; }
+  if (st.preparaRapporto) return;
+  st.preparaRapporto = true; avvisa("Preparo il rapporto…");
+  try {
+    salva(memoria, s);
+    const {creaRapporto} = await import("./pdf.mjs?v=0.10");
+    const {doc, nome, pagine} = await creaRapporto({s, pol, finestra: f, versione: VERSIONE});
+    doc.save(nome);
+    evento("Rapporto PDF: " + nome); avvisa("Rapporto " + nome + " scaricato (" + pagine + (pagine === 1 ? " pagina)." : " pagine).")); salvaPresto();
+  } catch (err) { avvisa("Rapporto non creato: " + (err?.message || err) + "."); }
+  finally { st.preparaRapporto = false; }
 }
 
 // ---------------- Configurazione del campo ----------------
@@ -1631,6 +1645,7 @@ $("btn-esporta").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   evento("Sessione esportata: " + nome); avvisa("File " + nome + " scaricato."); salvaPresto(); disegnaAltro();
 });
+document.querySelectorAll("[data-rapporto]").forEach(b => b.addEventListener("click", () => scaricaRapporto(b.closest("#vista-altro") ? Number($("rap-uscita").value) || undefined : undefined)));
 $("btn-importa").addEventListener("click", () => $("file-importa").click());
 $("file-importa").addEventListener("change", async e => {
   const file = e.target.files?.[0]; e.target.value = "";
@@ -1684,7 +1699,6 @@ $("allarme-ok").addEventListener("click", () => {
 $("tar-motore").addEventListener("click", taraMotore);
 $("tar-dritta").addEventListener("click", () => taraBolina("dritta"));
 $("tar-sinistra").addEventListener("click", () => taraBolina("sinistra"));
-$("tar-mano-ok").addEventListener("click", taraMano);
 $("tar-azzera").addEventListener("click", azzeraTaratura);
 const impostazione = (id, fn) => $(id).addEventListener("change", e => { fn(e.target.value); salvaPresto(); disegnaVento(); aggiorna(); });
 impostazione("imp-soglia", v => { s.vento.imp.soglia = Number(v); st.allScarso = null; });
@@ -1704,6 +1718,7 @@ document.querySelectorAll("[data-passo]").forEach(b => b.addEventListener("click
 document.querySelectorAll("[data-metodo]").forEach(b => b.addEventListener("click", () => { st.polMetodo = b.dataset.metodo; disegnaPolari(); }));
 $("pol-tws-ok").addEventListener("click", inserisciVento);
 for (const tipo of ["prua", "randa", "portante"]) $("pol-" + tipo).addEventListener("click", e => { const b = e.target.closest("[data-" + tipo + "]"); if (b) cambiaVele(tipo, b.dataset[tipo]); });
+$("pol-tipo").addEventListener("click", e => { const b = e.target.closest("[data-polare]"); if (b) { st.polTipo = b.dataset.polare; disegnaPolari(); } });
 $("pol-classi").addEventListener("click", e => { const b = e.target.closest("[data-classe]"); if (b) { st.polClasse = Number(b.dataset.classe); disegnaPolari(); } });
 $("pol-config").addEventListener("change", e => { st.polConfig = e.target.value; disegnaPolari(); });
 $("pol-validita").addEventListener("change", e => { pol.imp.validitaMin = Number(e.target.value); salvaPolari(); disegnaPolari(); });
@@ -1721,7 +1736,7 @@ $("pol-esporta").addEventListener("click", () => {
 $("pol-csv").addEventListener("click", () => {
   if (!pol.campioni.length) { avvisa("Nessun punto registrato."); return; }
   const scelta = configScelta(), nome = "rr-polare-" + dataFile() + ".csv";
-  const titolo = "RR Regatta - polare: " + (scelta === "tutte" ? "vele migliori per ogni angolo" : nomeVele(pol.configurazioni[scelta] ?? chiaveVele(pol.vele))) + " - velocita sul fondo in nodi\r\n";
+  const titolo = "RR Regatta - polare record: " + (scelta === "tutte" ? "vele migliori per ogni angolo" : nomeVele(pol.configurazioni[scelta] ?? chiaveVele(pol.vele))) + " - velocita sul fondo in nodi, media piu alta tenuta per 30 secondi\r\n";
   scaricaFile(nome, "\ufeff" + titolo + tabellaCsv(pol, scelta), "text/csv;charset=utf-8");
   avvisa("Tabella " + nome + " scaricata.");
 });

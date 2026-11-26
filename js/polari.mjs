@@ -2,7 +2,7 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.9.2";
+import {delta, circularMean} from "./engine.mjs?v=0.10";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
 export const PRUA = ["J1", "J2", "J3", "Tormentina"];
@@ -16,7 +16,7 @@ export const MAX_CAMPIONI = 30000;    // circa 16 ore a un punto ogni 2 secondi
 export function nuovePolari() {
   return {formato: "rr-regatta-polari", versione: 1, barca: "", configurazioni: [], campioni: [], letture: [],
     vele: {prua: "J1", randa: "Piena", portante: "Nessuna"}, vento: null,
-    imp: {validitaMin: 20, percentile: 80}};
+    imp: {validitaMin: 20}};
 }
 export function verificaPolari(obj) {
   if (!obj || obj.formato !== "rr-regatta-polari" || obj.versione !== 1) throw new Error("non è un file di polari di RR Regatta");
@@ -75,7 +75,9 @@ export function classeVento(tws) {
 // fixes: punti GPS recenti {received, cog, sog, accuracy}. Il punto vale solo se rotta e velocità sono stabili da 20 s.
 export function valutaPunto({fixes, adesso, rif, vento, validitaMs, ultimoCambioVele, minSog = 1}) {
   if (!rif || !Number.isFinite(rif.dir)) return {ok: false, motivo: "direzione del vento non tarata"};
-  if (rif.fonte === "andatura") return {ok: false, motivo: "il vento è stimato dall'andatura: per le polari serve la taratura a motore"};
+  // Per le polari l'angolo dal vento deve essere misurato, non presunto: valgono la prua al vento a motore e la
+  // bolina dichiarata su tutte e due le mure (bisettrice). Non valgono una sola mura, l'andatura o il vento a mano.
+  if (["andatura", "bolina", "a mano"].includes(rif.fonte)) return {ok: false, motivo: "per le polari serve la taratura a motore (o di bolina sulle due mure)"};
   if (Number.isFinite(rif.t) && adesso - rif.t > validitaMs) return {ok: false, motivo: "la taratura del vento ha " + Math.round((adesso - rif.t) / 60000) + " minuti: ritarala"};
   if (!vento || !Number.isFinite(vento.tws)) return {ok: false, motivo: "manca l'intensità del vento"};
   if (adesso - vento.t > validitaMs) return {ok: false, motivo: "l'intensità del vento ha " + Math.round((adesso - vento.t) / 60000) + " minuti: aggiornala"};
@@ -98,16 +100,38 @@ export function valutaPunto({fixes, adesso, rif, vento, validitaMs, ultimoCambio
 }
 
 // ---------------- Calcolo della polare ----------------
+// Due polari:
+// - record: per ogni casella la velocità media più alta tenuta per almeno 30 secondi (non conta le punte
+//   dell'onda); con tutti i punti è la polare massima della barca, con i soli punti di un'uscita è la polare
+//   della sessione;
+// - percentile (per ora non mostrato): la velocità superata solo dal 20% dei punti.
+export const DURATA_RECORD_MS = 30000;
+const PASSO_MAX_MS = 4500; // oltre questo intervallo due punti non sono consecutivi
 const percentile = (valori, p) => {
   const o = [...valori].sort((a, b) => a - b);
   return o[Math.max(0, Math.ceil(p / 100 * o.length) - 1)];
 };
-// Polare di una classe di vento: per ogni classe d'angolo, il percentile scelto delle velocità (80° = la velocità
-// che la barca raggiunge quando è ben condotta, senza dare peso alle punte dovute alle onde o al GPS).
-// config: indice di una configurazione, oppure "tutte" per la migliore configurazione in ciascun angolo.
-export function polare(pol, classe, config = "tutte", p = pol.imp?.percentile ?? 80) {
+// Velocità media più alta tenuta per «durata» in una lista di punti della stessa casella.
+// Ogni punto è già la media dei 10 secondi precedenti: 20 s di punti consecutivi coprono 30 s di navigazione.
+export function migliorTenuta(lista, durataMs = DURATA_RECORD_MS) {
+  const o = [...lista].sort((a, b) => a[0] - b[0]), arco = durataMs - 10000;
+  let best = null, i = 0, somma = 0;
+  for (let j = 0; j < o.length; j++) {
+    if (j > 0 && o[j][0] - o[j - 1][0] > PASSO_MAX_MS) { i = j; somma = 0; }
+    somma += o[j][2];
+    while (i < j && o[j][0] - o[i + 1][0] >= arco) { somma -= o[i][2]; i++; }
+    if (o[j][0] - o[i][0] >= arco) { const v = somma / (j - i + 1); if (!best || v > best.v) best = {v, t: o[i][0]}; }
+  }
+  return best;
+}
+// Polare di una classe di vento. config: indice di una configurazione di vele, oppure «tutte» per la migliore
+// in ciascun angolo. opz: {da, a} per i soli punti di un intervallo di tempo (la sessione);
+// statistica «record» (predefinita) oppure un percentile (numero).
+export function polare(pol, classe, config = "tutte", opz = {}) {
+  const {da = -Infinity, a: fino = Infinity, statistica = "record"} = typeof opz === "number" ? {statistica: opz} : opz;
   const gruppi = new Map();
   for (const c of pol.campioni) {
+    if (c[0] < da || c[0] > fino) continue;
     if (classeVento(c[3]) !== classe) continue;
     if (config !== "tutte" && c[4] !== config) continue;
     const a = classeVicina(Math.abs(c[1]), CLASSI_ANGOLO);
@@ -122,8 +146,14 @@ export function polare(pol, classe, config = "tutte", p = pol.imp?.percentile ??
     let migliore = null, totale = 0;
     for (const [k, lista] of g) {
       totale += lista.length;
-      const valido = lista.length >= MIN_PUNTI;
-      const cand = {twa: a, v: percentile(lista.map(c => c[2]), p), n: lista.length, nS: lista.filter(c => c[1] > 0).length,
+      let v, t, valido;
+      if (statistica === "record") {
+        const r = migliorTenuta(lista);
+        valido = !!r;
+        if (r) ({v, t} = r);
+        else { const m = lista.reduce((x, c) => c[2] > x[2] ? c : x); v = m[2]; t = m[0]; } // meno di 30 s: valore provvisorio
+      } else { v = percentile(lista.map(c => c[2]), statistica); t = null; valido = lista.length >= MIN_PUNTI; }
+      const cand = {twa: a, v, t, n: lista.length, nS: lista.filter(c => c[1] > 0).length,
         nD: lista.filter(c => c[1] <= 0).length, config: k, valido,
         angoloMedio: lista.reduce((s, c) => s + Math.abs(c[1]), 0) / lista.length};
       if (!migliore || (valido && !migliore.valido) || (valido === migliore.valido && cand.v > migliore.v)) migliore = cand;
@@ -152,7 +182,7 @@ export function velocitaPolare(punti, twa) {
   const vicino = sotto || sopra;
   return Math.abs(vicino.twa - a) <= 5 ? vicino.v : null;
 }
-export const classiConDati = pol => CLASSI_VENTO.filter(k => pol.campioni.some(c => classeVento(c[3]) === k));
+export const classiConDati = (pol, {da = -Infinity, a = Infinity} = {}) => CLASSI_VENTO.filter(k => pol.campioni.some(c => c[0] >= da && c[0] <= a && classeVento(c[3]) === k));
 export const configurazioniConDati = (pol, classe) => [...new Set(pol.campioni.filter(c => classe == null || classeVento(c[3]) === classe).map(c => c[4]))].sort((a, b) => a - b);
 
 // Tabella da aprire con un foglio di calcolo: angoli in riga, classi di vento in colonna, separatore «;» e virgola decimale.

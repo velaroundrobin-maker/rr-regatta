@@ -360,3 +360,4 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
   .btn-reset{padding:0 8px;font-size:13px}
   .stato-gps{padding:6px 8px;font-size:13px;gap:5px}
 }
+.tabella-polare td:not(:last-child),.tabella-polare th{white-space:nowrap}
