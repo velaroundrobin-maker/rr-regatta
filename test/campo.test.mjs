@@ -82,7 +82,7 @@ test("distanze in metri e miglia", () => {
 test("sessioni delle versioni precedenti ricevono vento e dati della barca", () => {
   const vecchia = nuovaSessione("loano-1"); delete vecchia.vento; delete vecchia.barca; delete vecchia.registro;
   const v = verifica(JSON.parse(JSON.stringify(vecchia)));
-  assert.equal(v.vento.imp.soglia, 6); assert.deepEqual(v.vento.rif, {dritta: null, sinistra: null});
+  assert.equal(v.vento.imp.soglia, 4); assert.deepEqual(v.vento.rif, {dritta: null, sinistra: null});
   assert.equal(v.barca.lunghezza, 10); assert.deepEqual(v.registro, []);
 });
 

@@ -33,6 +33,7 @@ export function svgPolare({W, H, serie, ottimi = null, tema = "scuro", vuoto = "
     out += testo(T, Math.min(W - 3, q.x + 2), q.y + (a < 90 ? 0 : a === 90 ? 4 : 10), a + "°", {anchor: q.x > W - 28 ? "end" : "start"});
   }
   out += testo(T, cx + 6, 12, "VENTO ↓", {colore: T.testo, peso: 700});
+  out += testo(T, 3, H - 3, "cerchi: velocità della barca", {size: 10});
   for (const s of serie) {
     const validi = s.punti.filter(q => q.valido);
     // La linea si interrompe dove mancano angoli (più di 40° senza dati): non si inventano velocità.

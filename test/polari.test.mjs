@@ -17,7 +17,7 @@ test("vento vero dall'anemometro", () => {
   assert.equal(ventoVero(16.5, "motore", 4.5), 12);
   assert.equal(ventoVero(3, "motore", 5), 0);
   assert.equal(ventoVero(NaN, "fermo", 0), null);
-  assert.equal(classeVento(11.2), 12); assert.equal(classeVento(10.9), 10); assert.equal(classeVento(2), null); assert.equal(classeVento(30), 25);
+  assert.equal(classeVento(11.2), 12); assert.equal(classeVento(10.9), 10); assert.equal(classeVento(2), null); assert.equal(classeVento(30), 30); assert.equal(classeVento(27), 25); assert.equal(classeVento(33), null);
 });
 test("punto accettato solo con rotta e velocità stabili da 20 secondi", () => {
   const adesso = 100000, rif = {dir: 0, t: adesso - 60000}, vento = {tws: 10, t: adesso - 60000};

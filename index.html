@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="./round-robin-logo.png" type="image/png">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="./app.css?v=0.10">
+<link rel="stylesheet" href="./app.css?v=0.11">
 <title>RR Regatta</title>
 </head>
 <body>
@@ -29,6 +29,7 @@
     <button type="button" class="modo-app" data-modo-app="polari">POLARI</button>
     <a class="secondario largo guida-link" href="./guida/">Guida all'app</a>
     <button type="button" class="secondario largo" id="home-altro">File, registro e impostazioni</button>
+    <div class="home-reg" id="home-reg" hidden><span id="home-reg-testo">—</span><button type="button" class="secondario" id="home-reg-stop">Stop</button></div>
     <p class="aiuto" id="home-stato">—</p>
   </main>
 
@@ -38,6 +39,14 @@
       <h2 id="intro-titolo">—</h2>
       <p class="intro-sintesi" id="intro-sintesi">—</p>
       <ul class="intro-lista" id="intro-lista"></ul>
+    </section>
+    <section class="blocco">
+      <p class="sotto-titolo">Registrare la traccia?</p>
+      <div class="segmento" role="group" aria-label="Registrare la traccia" id="intro-registra">
+        <button type="button" data-reg="si" aria-pressed="true">Sì</button>
+        <button type="button" data-reg="no" aria-pressed="false">No</button>
+      </div>
+      <p class="aiuto" id="intro-reg-nota">—</p>
     </section>
     <button type="button" class="principale largo" id="intro-conferma">Conferma</button>
     <button type="button" class="secondario largo" id="intro-indietro">Indietro</button>
@@ -172,16 +181,48 @@
 
     <section class="azioni">
       <button type="button" class="principale" id="btn-gps">Accendi GPS</button>
+      <button type="button" class="secondario parametri" id="btn-parametri"><b>Parametri</b><small id="par-riassunto">—</small></button>
       <button type="button" class="interruttore-bolina" id="btn-andatura" aria-pressed="false" hidden>Andatura</button>
       <button type="button" class="secondario" id="btn-passata">Boa passata ›</button>
-      <button type="button" class="interruttore-bolina registra-azione" id="btn-registra" aria-pressed="false" hidden>Registra</button>
+      <button type="button" class="secondario registra-azione" id="btn-registra" aria-pressed="false" hidden>Registra</button>
       <button type="button" class="principale" id="btn-traguardo" hidden>Taglia il traguardo</button>
+    </section>
+    <section class="foglio" id="pannello-parametri" hidden aria-label="Aggiorna parametri">
+      <div class="foglio-testa"><h2>AGGIORNA PARAMETRI</h2><button type="button" class="chiudi-foglio" id="par-chiudi" aria-label="Chiudi">×</button></div>
+      <div class="segmento" role="group" aria-label="Propulsione" id="par-propulsione">
+        <button type="button" data-propulsione="vela" aria-pressed="true">A vela</button>
+        <button type="button" data-propulsione="motore" aria-pressed="false">A motore</button>
+      </div>
+      <p class="sotto-titolo">Vento vero, in nodi</p>
+      <div class="riga-vento">
+        <button type="button" class="passo" data-ppasso="-1" aria-label="Un nodo in meno">−</button>
+        <input id="par-tws" type="number" inputmode="decimal" min="0" max="40" step="1" placeholder="nodi" aria-label="Vento vero in nodi">
+        <button type="button" class="passo" data-ppasso="1" aria-label="Un nodo in più">+</button>
+      </div>
+      <button type="button" class="principale largo" id="par-tws-ok">Conferma il vento</button>
+      <p class="aiuto" id="par-vento-stato">—</p>
+      <p class="sotto-titolo">Direzione del vento</p>
+      <p class="tar-stato" id="par-dir-stato">—</p>
+      <div class="tre-pulsanti">
+        <button type="button" class="secondario" data-ptar="motore">Prua al vento a motore</button>
+        <button type="button" class="secondario" data-ptar="sinistra">Bolina stretta mure a sinistra</button>
+        <button type="button" class="secondario" data-ptar="dritta">Bolina stretta mure a dritta</button>
+      </div>
+      <p class="sotto-titolo">Vela di prua</p>
+      <div class="scelte" id="par-prua"></div>
+      <p class="sotto-titolo">Randa</p>
+      <div class="scelte tre" id="par-randa"></div>
+      <p class="sotto-titolo">Vele colorate</p>
+      <div class="scelte" id="par-portante"></div>
+      <p class="tar-stato" id="par-polari">—</p>
+      <button type="button" class="principale largo" id="par-fatto">Fatto</button>
     </section>
   </main>
 
     <!-- REGATA: campo, boe, taratura, partenza, vento, arrivo, impostazioni -->
   <main class="vista scorre" id="vista-regata" hidden>
     <nav class="indice" aria-label="Sezioni della regata">
+      <button type="button" class="indice-parametri" id="regata-parametri">Parametri</button>
       <button type="button" data-vai="sez-percorso">Percorso</button>
       <button type="button" data-vai="sez-boe">Boe</button>
       <button type="button" data-vai="sez-taratura">Taratura</button>
@@ -333,6 +374,10 @@
 
     <section class="blocco">
       <h2>VELE A RIVA</h2>
+      <div class="segmento" role="group" aria-label="Propulsione" id="pol-propulsione">
+        <button type="button" data-propulsione="vela" aria-pressed="true">A vela</button>
+        <button type="button" data-propulsione="motore" aria-pressed="false">A motore</button>
+      </div>
       <p class="tar-stato" id="pol-vele-stato">—</p>
       <p class="sotto-titolo">Vela di prua</p>
       <div class="scelte" id="pol-prua"></div>
@@ -399,8 +444,9 @@
       <button type="button" class="secondario largo" id="btn-annulla-reset" hidden>Annulla l'ultimo reset</button>
     </section>
     <section class="blocco">
-      <h2>SCHERMO E MAPPA</h2>
+      <h2>SCHERMO, GPS E MAPPA</h2>
       <button type="button" class="interruttore" id="imp-intero" aria-pressed="true">Schermo intero: sì</button>
+      <button type="button" class="interruttore" id="imp-gps" aria-pressed="true">GPS: acceso</button>
       <div class="impostazioni"><label>Chiedi di confermare l'andatura ogni <select id="imp-promemoria"><option value="0">mai</option><option value="3">3 minuti</option><option value="5">5 minuti</option><option value="10">10 minuti</option></select></label></div>
       <p class="aiuto">Solo con la barca in movimento e fuori dalla bolina stretta.</p>
       <button type="button" class="interruttore" id="btn-schermo" aria-pressed="false">Schermo sempre acceso: no</button>
@@ -421,6 +467,6 @@
 </div>
 <div class="avviso" id="avviso" role="status" aria-live="polite" hidden></div>
 <div class="avviso errore" id="avviso-errore" hidden></div>
-<script type="module" src="./js/app.mjs?v=0.10"></script>
+<script type="module" src="./js/app.mjs?v=0.11"></script>
 </body>
 </html>

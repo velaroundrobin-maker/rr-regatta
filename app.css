@@ -361,3 +361,46 @@ summary{font-weight:800;min-height:40px;display:flex;align-items:center;cursor:p
   .stato-gps{padding:6px 8px;font-size:13px;gap:5px}
 }
 .tabella-polare td:not(:last-child),.tabella-polare th{white-space:nowrap}
+
+/* ----- v0.11: registrazione, parametri, layout ----- */
+#versione.registra{color:var(--rosso);font-weight:900}
+.home-reg{display:flex;align-items:center;gap:10px;border:2px solid var(--rosso);border-radius:12px;padding:8px 10px;font-weight:800}
+.home-reg span{flex:1;line-height:1.3}
+.home-reg button{flex:none;min-height:44px;padding:0 16px}
+/* Pulsanti in basso tutti uguali. */
+.azioni>button{flex:1 1 0;min-width:0;min-height:52px}
+.azioni .principale.attivo,.vista-nav[data-modo="navigazione"] .azioni .principale.attivo{flex:1 1 0}
+.azioni .parametri{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px 4px;line-height:1.1}
+.azioni .parametri b{font-size:16px}
+.azioni .parametri small{font-size:11px;font-weight:700;color:var(--grigio);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.azioni .registra-azione[aria-pressed="true"]{background:var(--rosso);border-color:var(--rosso);color:#fff}
+/* Pannello dei parametri: copre gli strumenti, si scorre. */
+.vista-nav{position:relative}
+.foglio{position:absolute;inset:0;z-index:20;background:var(--nero,#000);overflow-y:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:7px}
+.foglio>*{flex:none}
+.foglio-testa{display:flex;align-items:center;justify-content:space-between}
+.foglio-testa h2{margin:0;color:var(--rosso);font-size:17px}
+.chiudi-foglio{width:44px;height:44px;border-radius:10px;border:1px solid #666;background:#1c1c1c;font-size:24px;font-weight:800}
+.tre-pulsanti{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tre-pulsanti button{min-height:58px;font-size:14px;line-height:1.15;padding:4px}
+/* Comandi della mappa: la colonna occupa tutta l'altezza, i pulsanti si dividono lo spazio. */
+.comandi-mappa{top:4px;bottom:4px;display:flex;flex-direction:column;gap:5px}
+.comandi-mappa button{flex:1 1 0;height:auto;min-height:30px;max-height:none}
+/* Pulsanti in basso: stesso stile; bianco solo per l'azione di regata, rosso per la registrazione in corso. */
+.azioni .parametri,.azioni .registra-azione{border:2px solid #777;background:#1c1c1c}
+.azioni .registra-azione{font-size:16px;line-height:1.15;padding:4px 6px}
+/* «Tormentina» ha bisogno di più spazio delle altre vele di prua. */
+#par-prua,#pol-prua{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.5fr)}
+/* La spiegazione della modalità al centro dello schermo, come la pagina iniziale. */
+#vista-intro{justify-content:center}
+/* Su schermi alti (tablet) i comandi non diventano enormi: altezza massima e spazi uguali, dal primo in alto all'ultimo in fondo. */
+.comandi-mappa{justify-content:space-between}
+.comandi-mappa button{max-height:140px}
+.azioni .registra-azione{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px 4px;line-height:1.1}
+.azioni .registra-azione b{font-size:16px}
+.azioni .registra-azione small{font-size:11px;font-weight:700;color:var(--grigio);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.azioni .registra-azione[aria-pressed="true"] small{color:#fff}
+.indice .indice-parametri{border-color:var(--rosso)}
+/* Schede in basso: larghezza secondo il nome, nessuna parola tagliata. */
+.schede{display:flex}
+.schede button{flex:1 1 auto;white-space:nowrap}

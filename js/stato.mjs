@@ -1,5 +1,5 @@
 // Sessione di regata: creazione, cambio modello senza perdere le posizioni, salvataggio e verifica dei file.
-import {MODELLI} from "./campo.mjs?v=0.10";
+import {MODELLI} from "./campo.mjs?v=0.11";
 
 export const CHIAVE = "rr-regatta-sessione-v1";
 const copia = x => JSON.parse(JSON.stringify(x));
@@ -14,14 +14,29 @@ export function nuovaSessione(modello = "loano-1", adesso = Date.now()) {
     arrivo: {ugualePartenza: m.arrivo.ugualePartenza, etichette: [...m.arrivo.etichette], estremi: {a: null, b: null}, taglio: null},
     eventi: [], traccia: [], registro: [],
     vento: nuovoVento(), barca: {lunghezza: 10, angoloVirata: 90},
-    timer: nuovoTimer(), cronometro: nuovoCrono(), preferenze: {schermoIntero: true}
+    timer: nuovoTimer(), cronometro: nuovoCrono(), preferenze: {schermoIntero: true},
+    registrazioni: [] // {id, modo, inizio, fine}; fine null = in corso
   };
+}
+// Registrazioni: la traccia, i dati ogni 2 s e i punti delle polari si salvano solo durante una registrazione.
+export const registrazioneAttiva = s => { const r = s.registrazioni?.[s.registrazioni.length - 1]; return r && r.fine === null ? r : null; };
+export function avviaRegistrazione(s, modo, t = Date.now()) {
+  fermaRegistrazione(s, t);
+  const r = {id: t, modo, inizio: t, fine: null};
+  s.registrazioni.push(r);
+  if (s.registrazioni.length > 100) s.registrazioni.splice(0, s.registrazioni.length - 100);
+  return r;
+}
+export function fermaRegistrazione(s, t = Date.now()) {
+  const r = registrazioneAttiva(s);
+  if (r) r.fine = Math.max(r.inizio, t);
+  return r;
 }
 export const nuovoTimer = (ultimi10 = false) => ({zero: null, ultimi10, partenza: null});
 export const nuovoCrono = () => ({inizio: null, accumulato: 0, parziali: [], posAvvio: null});
 export function nuovoVento(imp) {
   return {iniziale: null, rif: {dritta: null, sinistra: null}, campioni: [], rotazione: null, bolina: false,
-    imp: {soglia: 6, durataS: 20, mediaMin: 5, audio: true, promemoriaMin: 3, ...(imp || {})}};
+    imp: {soglia: 4, durataS: 20, mediaMin: 5, audio: true, promemoriaMin: 3, ...(imp || {}), v11: true}};
 }
 
 // Cambia modello mantenendo posizioni, rilevamenti e storico delle boe con lo stesso codice.
@@ -52,6 +67,8 @@ export function verifica(obj) {
   for (const b of obj.boe) if (typeof b.codice !== "string" || !b.codice) throw new Error("boa senza codice");
   obj.eventi ??= []; obj.traccia ??= []; obj.registro ??= []; obj.tappa = Number.isInteger(obj.tappa) ? obj.tappa : 0;
   // Sessioni create con versioni precedenti: si aggiungono vento e dati della barca.
+  // v0.11: lo scarso si segnala da 4° (prima 6°): le sessioni salvate con il vecchio valore predefinito passano a 4°.
+  if (obj.vento?.imp && !obj.vento.imp.v11 && obj.vento.imp.soglia === 6) obj.vento.imp.soglia = 4;
   const v = nuovoVento(obj.vento?.imp);
   obj.vento = {...v, ...(obj.vento || {}), rif: {...v.rif, ...(obj.vento?.rif || {})}, imp: v.imp};
   obj.vento.campioni ??= [];
@@ -59,6 +76,8 @@ export function verifica(obj) {
   obj.timer = {...nuovoTimer(), ...(obj.timer || {})};
   obj.cronometro = {...nuovoCrono(), ...(obj.cronometro || {})};
   obj.preferenze = {schermoIntero: true, ...(obj.preferenze || {})};
+  obj.registrazioni = (Array.isArray(obj.registrazioni) ? obj.registrazioni : []).filter(r => r && Number.isFinite(r.inizio) && typeof r.modo === "string" && (r.fine === null || Number.isFinite(r.fine)));
+  obj.registrazioni.forEach((r, i, a) => { if (r.fine === null && i < a.length - 1) r.fine = a[i + 1].inizio; }); // una sola in corso, l'ultima
   for (const b of obj.boe) { b.storico ??= []; b.osservazioni ??= []; b.pos ??= null; }
   return obj;
 }

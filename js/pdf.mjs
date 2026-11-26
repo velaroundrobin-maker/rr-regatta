@@ -1,8 +1,9 @@
-// Rapporto PDF di un'uscita (v0.10): riepilogo, traccia, velocità, prove, vento, vele, polari della sessione e record,
-// registro. Si crea sul telefono con jsPDF (lib/jspdf.umd.min.js, licenza MIT), caricato solo quando serve.
-import {statistiche, prove, veleUsate, eventiVento, modalita, eventiUscita, dentro} from "./rapporto.mjs?v=0.10";
-import {polare, ottimi, classiConDati, CLASSI_ANGOLO, nomeVele} from "./polari.mjs?v=0.10";
-import {svgTraccia, svgTempo, svgPolare} from "./grafici.mjs?v=0.10";
+// Rapporto PDF di una registrazione (v0.11): solo le sezioni utili alla modalità; vele e polari sempre.
+// Riepilogo, traccia, velocità, prove (Regata e Allenamento), vento, vele, polari della sessione confrontate con il
+// record delle stesse vele, tabella dei record, registro. Si crea sul telefono con jsPDF (lib/jspdf.umd.min.js, MIT).
+import {statistiche, prove, veleUsate, eventiVento, modalita, eventiUscita, dentro} from "./rapporto.mjs?v=0.11";
+import {polare, ottimi, classiConDati, CLASSI_ANGOLO, nomeVele} from "./polari.mjs?v=0.11";
+import {svgTraccia, svgTempo, svgPolare} from "./grafici.mjs?v=0.11";
 
 const A4 = {w: 210, h: 297}, M = 14, L = A4.w - 2 * M, ROSSO = [224, 0, 0], GRIGIO = [110, 110, 110];
 const num = (v, d = 1) => Number.isFinite(v) ? v.toFixed(d).replace(".", ",") : "—";
@@ -12,6 +13,7 @@ const data = t => new Date(t).toLocaleDateString("it-IT", {day: "2-digit", month
 const durata = ms => { if (!Number.isFinite(ms)) return "—"; const m = Math.round(ms / 60000), h = Math.floor(m / 60); return h ? h + " h " + String(m % 60).padStart(2, "0") + " min" : m + " min"; };
 const tempoGara = ms => { const s = Math.round(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s % 60).padStart(2, "0"); };
 // I caratteri standard del PDF non hanno alcuni simboli: si sostituiscono con equivalenti.
+const NOMI = {navigazione: "Navigazione", allenamento: "Allenamento", regata: "Regata", polari: "Polari"};
 const pulisci = t => String(t).replace(/−/g, "-").replace(/[′’]/g, "'").replace(/″/g, '"').replace(/≈/g, "~").replace(/★/g, "*").replace(/→/g, "->").replace(/↶/g, "").replace(/[^\x00-\xff€™–—…·•‘“”]/g, "");
 
 let caricamento = null;
@@ -19,7 +21,7 @@ function caricaJsPdf() {
   if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
   caricamento ??= new Promise((ok, ko) => {
     const sc = document.createElement("script");
-    sc.src = new URL("../lib/jspdf.umd.min.js?v=0.10", import.meta.url).href;
+    sc.src = new URL("../lib/jspdf.umd.min.js?v=0.11", import.meta.url).href;
     sc.onload = () => window.jspdf?.jsPDF ? ok(window.jspdf.jsPDF) : ko(new Error("libreria PDF non disponibile"));
     sc.onerror = () => { caricamento = null; ko(new Error("libreria PDF non scaricata: serve la connessione")); };
     document.head.append(sc);
@@ -48,7 +50,8 @@ async function logo() {
 export async function creaRapporto({s, pol, finestra: f, versione}) {
   const JsPDF = await caricaJsPdf();
   const doc = new JsPDF({unit: "mm", format: "a4", compress: true});
-  doc.setProperties({title: "RR Regatta - rapporto dell'uscita del " + data(f.da), creator: "RR Regatta " + versione + " - Round Robin Labs"});
+  doc.setProperties({title: "RR Regatta - rapporto " + (f.modo ? NOMI[f.modo] + " " : "") + "del " + data(f.da), creator: "RR Regatta " + versione + " - Round Robin Labs"});
+  const corsa = !f.modo || f.modo === "regata" || f.modo === "allenamento"; // prove e campo solo dove servono
   let y = M;
   const testo = (t, x, yy, {size = 10, bold = false, colore = [17, 17, 17], allinea = "left", larghezza = null} = {}) => {
     doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.setTextColor(...colore);
@@ -106,7 +109,7 @@ export async function creaRapporto({s, pol, finestra: f, versione}) {
   // ---------- Pagina 1: intestazione, riepilogo, traccia ----------
   const lg = await logo();
   if (lg) doc.addImage(lg, "PNG", M, 9, 15, 15);
-  testo("Rapporto dell'uscita", M + 19, 16, {size: 17, bold: true});
+  testo("Rapporto" + (f.modo ? " · " + NOMI[f.modo] : " dell'uscita"), M + 19, 16, {size: 17, bold: true});
   testo("RR Regatta · Round Robin Labs™ · Round Robin A.S.D.", M + 19, 21.5, {size: 9, colore: GRIGIO});
   testo(data(f.da), M + L, 15.5, {size: 12, bold: true, allinea: "right"});
   testo(ora(f.da) + "–" + ora(f.a) + (data(f.a) !== data(f.da) ? " del " + data(f.a) : ""), M + L, 21.5, {size: 10, allinea: "right"});
@@ -116,20 +119,21 @@ export async function creaRapporto({s, pol, finestra: f, versione}) {
     ["Durata", durata(stat.durata)], ["In movimento", durata(stat.movimentoMs)], ["Distanza", num(stat.distanzaNm) + " M"],
     ["Velocità media in movimento", stat.mediaKn ? num(stat.mediaKn) + " kn" : "—"],
     ["Velocità massima (media su 10 s)", stat.max ? num(stat.max.v) + " kn alle " + ora(stat.max.t) : "—"],
-    ["Bolina stretta con le stime attive", durata(stat.bolinaMs)]];
+    ["Polari registrate (tempo utile)", durata(pol.campioni.filter(c => dentro(c[0], f)).length * 2000)]];
   celle.forEach(([k, v], i) => {
     const x = M + (i % 3) * (L / 3), yy = y + Math.floor(i / 3) * 14;
     testo(k, x, yy, {size: 8.5, colore: GRIGIO}); testo(v, x, yy + 6, {size: 13, bold: true});
   });
   y += 30;
   const righeInfo = [];
-  if (modi.length) righeInfo.push(["Modalità", modi.join(", ")]);
-  if (boe.length && s.campo?.nome) righeInfo.push(["Campo", s.campo.nome + " · " + s.campo.sequenza]);
-  if (gare.length) righeInfo.push(["Prove", gare.length + (gare.some(g => g.tempo) ? " · tempo: " + gare.filter(g => g.tempo).map(g => tempoGara(g.tempo)).join(", ") : "")]);
+  if (!f.modo && modi.length) righeInfo.push(["Modalità", modi.join(", ")]);
+  if (corsa && boe.length && s.campo?.nome) righeInfo.push(["Campo", s.campo.nome + " · " + s.campo.sequenza]);
+  if (stat.bolinaMs > 60000) righeInfo.push(["Bolina stretta", durata(stat.bolinaMs) + " con le stime dei salti attive"]);
+  if (corsa && gare.length) righeInfo.push(["Prove", gare.length + (gare.some(g => g.tempo) ? " · tempo: " + gare.filter(g => g.tempo).map(g => tempoGara(g.tempo)).join(", ") : "")]);
   if (vento.length) righeInfo.push(["Vento", vento.filter(e => !/^ALLARME/.test(e.testo)).length + " tra tarature e indicazioni · " + (n => n === 1 ? "1 allarme" : n + " allarmi")(vento.filter(e => /^ALLARME/.test(e.testo)).length)]);
   for (const [k, v] of righeInfo) { testo(k, M, y, {size: 9, colore: GRIGIO}); y += testo(v, M + 30, y, {size: 9.5, larghezza: L - 30}) * 4.4 + 0.8; }
   sezione("Traccia", 136);
-  await immagine(svgTraccia({W: 728, H: 520, punti, boe, max: stat.max}), 728, 520, L);
+  await immagine(svgTraccia({W: 728, H: 520, punti, boe: corsa ? boe : [], max: stat.max}), 728, 520, L);
   nota("Traccia dal GPS del telefono, nord in alto. Il punto rosso è dove la barca ha tenuto la velocità più alta per 10 secondi.");
 
   // ---------- Velocità, prove, vento, vele ----------
@@ -137,7 +141,7 @@ export async function creaRapporto({s, pol, finestra: f, versione}) {
   await immagine(svgTempo({W: 728, H: 230, serie: stat.serie, da: f.da, a: f.a, max: stat.max}), 728, 230, L);
   nota("Velocità sul fondo in nodi, media per intervalli di " + Math.round(Math.max(30, (f.a - f.da) / 400 / 1000)) + " secondi circa.");
 
-  if (gare.length) {
+  if (corsa && gare.length) {
     sezione("Prove", 34);
     gare.forEach((g, i) => {
       spazio(14); testo("Prova " + (i + 1) + (g.partenza ? " · partenza alle " + oraS(g.partenza) : " · senza partenza dal timer") + (g.tempo ? " · tempo " + tempoGara(g.tempo) : g.arrivo ? "" : " · arrivo non registrato"), M, y, {size: 10, bold: true}); y += 5;
@@ -155,45 +159,47 @@ export async function creaRapporto({s, pol, finestra: f, versione}) {
   if (vele.polari.length) tabella([{titolo: "Vele durante la registrazione delle polari", w: L - 34}, {titolo: "Tempo utile", w: 34}], vele.polari.map(v => [v.nome, durata(v.ms)]));
   if (!vele.aBordo.length && !vele.polari.length) nota("Vele non indicate in questa uscita (si scelgono nella scheda Polari).");
 
-  // ---------- Polari della sessione e record ----------
-  const classiS = classiConDati(pol, f);
-  sezione("Polari della sessione", classiConDati(pol, f).length ? 92 : 10);
-  if (!classiS.length) nota("Nessuna polare registrata in questa uscita.");
-  for (const k of classiS) {
-    const ses = polare(pol, k, "tutte", f), rec = polare(pol, k, "tutte"), o = ottimi(ses);
+  // ---------- Polari della sessione confrontate con il record delle stesse vele; record (il «database» per vele) ----------
+  const usate = vele.polari.map(v => v.k), soloVele = k => ({...pol, campioni: pol.campioni.filter(c => c[4] === k)});
+  sezione("Polari della sessione", usate.length ? 92 : 10);
+  if (!usate.length) nota("Nessun punto delle polari in questa registrazione. Servono: taratura del vento, vento vero indicato in «Parametri», vele a riva, navigazione a vela con rotta e velocità stabili.");
+  for (const k of usate) for (const tws of classiConDati(soloVele(k), f)) {
+    const ses = polare(pol, tws, k, f), rec = polare(pol, tws, k), o = ottimi(ses);
     spazio(92);
-    testo("Vento vero " + k + " nodi", M, y, {size: 11, bold: true}); y += 3;
+    testo(nomiCfg[k] + " · vento vero " + tws + " nodi", M, y, {size: 11, bold: true}); y += 3;
     const y0 = y;
     doc.addImage(await png(svgPolare({W: 360, H: 400, serie: [{punti: rec, colore: "#9a9a9a", spessore: 2, tratteggio: "6 5", segni: false}, {punti: ses, colore: "#e00000"}], ottimi: o, tema: "chiaro"}), 360, 400), "PNG", M, y, 76, 84.4, undefined, "FAST");
     const salva = y; y = y0 + 4;
-    const xT = M + 80, colonne = [["Angolo", 15], ["Sessione", 18], ["Record", 18], ["Vele", L - 80 - 51]];
-    let x = xT; for (const [t, w] of colonne) { testo(t, x, y, {size: 8, bold: true, colore: GRIGIO}); x += w; }
-    y += 4.2;
+    const xT = M + 82, colonne = [["Angolo", 18], ["Sessione", 22], ["Record", 22], ["Punti D/S", 24]];
+    let x = xT; for (const [t, w] of colonne) { testo(t, x, y, {size: 8.5, bold: true, colore: GRIGIO}); x += w; }
+    y += 4.4;
     for (const q of ses) {
       const r = rec.find(z => z.twa === q.twa), nuovo = r && q.valido && r.valido && Math.abs(r.v - q.v) < 1e-9;
       x = xT;
-      const vals = [q.twa + "°", q.valido ? num(q.v) : "(" + num(q.v) + ")", r ? (r.valido ? num(r.v) : "(" + num(r.v) + ")") + (nuovo ? " *" : "") : "—", nomiCfg[q.config] ?? ""];
-      let righeCella = 1;
-      vals.forEach((v, i) => { righeCella = Math.max(righeCella, testo(v, x, y, {size: 8, bold: i === 1 && q.valido, colore: i === 2 && nuovo ? ROSSO : [17, 17, 17], larghezza: i === 3 ? colonne[3][1] - 1 : null})); x += colonne[i][1]; });
-      y += 3.4 * righeCella + 0.8;
+      [q.twa + "°", q.valido ? num(q.v) : "(" + num(q.v) + ")", r ? (r.valido ? num(r.v) : "(" + num(r.v) + ")") + (nuovo ? " *" : "") : "—", q.nD + "/" + q.nS]
+        .forEach((v, i) => { testo(v, x, y, {size: 8.5, bold: i === 1 && q.valido, colore: i === 2 && nuovo ? ROSSO : [17, 17, 17]}); x += colonne[i][1]; });
+      y += 4.2;
     }
-    if (o.bolina || o.poppa) { y += 1; testo((o.bolina ? "Bolina migliore " + o.bolina.twa + "°, VMC " + num(o.bolina.vmg) + " kn. " : "") + (o.poppa ? "Poppa migliore " + o.poppa.twa + "°, VMC " + num(o.poppa.vmg) + " kn." : ""), xT, y, {size: 8, larghezza: L - 80}); y += 8; }
-    y = Math.max(y, salva + 86);
+    if (o.bolina || o.poppa) { y += 1.5; y += testo((o.bolina ? "Bolina migliore " + o.bolina.twa + "°, VMC " + num(o.bolina.vmg) + " kn. " : "") + (o.poppa ? "Poppa migliore " + o.poppa.twa + "°, VMC " + num(o.poppa.vmg) + " kn." : ""), xT, y, {size: 8.5, larghezza: L - 82}) * 4; }
+    y = Math.max(y, salva + 92);
   }
-  if (classiS.length) nota("Rosso: la sessione. Grigio tratteggiato: il record di tutte le uscite. * = record fatto in questa uscita. Tra parentesi: meno di 30 secondi di dati.");
+  if (usate.length) nota("Rosso: la sessione. Grigio tratteggiato: il record con le stesse vele, da tutte le registrazioni. * = record fatto in questa sessione. Tra parentesi: meno di 30 secondi di dati. Cerchi del diagramma: velocità della barca, ogni 2 nodi.");
 
-  const classiR = classiConDati(pol);
-  sezione("Polari record", 40);
-  if (!classiR.length) nota("Nessuna polare registrata.");
-  else {
-    const tab = new Map(classiR.map(k => [k, polare(pol, k, "tutte")]));
-    const angoli = CLASSI_ANGOLO.filter(a => classiR.some(k => tab.get(k).some(q => q.twa === a)));
-    const wA = 22, wC = Math.min(22, (L - wA) / classiR.length);
-    const righe = angoli.map(a => [a + "°", ...classiR.map(k => { const q = tab.get(k).find(z => z.twa === a); return q ? (q.valido ? num(q.v) : "(" + num(q.v) + ")") : ""; })]);
-    righe.push(["Bolina", ...classiR.map(k => { const o = ottimi(tab.get(k)).bolina; return o ? o.twa + "°" : ""; })]);
-    righe.push(["Poppa", ...classiR.map(k => { const o = ottimi(tab.get(k)).poppa; return o ? o.twa + "°" : ""; })]);
-    tabella([{titolo: "Angolo", w: wA, forte: true}, ...classiR.map(k => ({titolo: k + " kn", w: wC, destra: true})), {titolo: "", w: L - wA - wC * classiR.length}], righe.map(r => [...r, ""]));
-    nota("Velocità sul fondo in nodi per angolo dal vento (righe) e vento vero (colonne), con le vele migliori per ogni angolo. Record = la media più alta tenuta per 30 secondi in tutte le uscite. Bolina e poppa: angoli con la VMC migliore.");
+  if (usate.length) {
+    sezione("Polari record con queste vele", 40);
+    for (const k of usate) {
+      const sub = soloVele(k), classiR = classiConDati(sub);
+      const tab = new Map(classiR.map(t => [t, polare(pol, t, k)]));
+      const angoli = CLASSI_ANGOLO.filter(a => classiR.some(t => tab.get(t).some(q => q.twa === a)));
+      spazio(20); testo(nomiCfg[k], M, y, {size: 10.5, bold: true}); y += 5;
+      const wA = 22, wC = Math.min(18, (L - wA) / Math.max(1, classiR.length));
+      const righe = angoli.map(a => [a + "°", ...classiR.map(t => { const q = tab.get(t).find(z => z.twa === a); return q ? (q.valido ? num(q.v) : "(" + num(q.v) + ")") : ""; })]);
+      righe.push(["Bolina", ...classiR.map(t => { const o = ottimi(tab.get(t)).bolina; return o ? o.twa + "°" : ""; })]);
+      righe.push(["Poppa", ...classiR.map(t => { const o = ottimi(tab.get(t)).poppa; return o ? o.twa + "°" : ""; })]);
+      tabella([{titolo: "Angolo", w: wA, forte: true}, ...classiR.map(t => ({titolo: t + " kn", w: wC, destra: true})), {titolo: "", w: L - wA - wC * classiR.length}], righe.map(r => [...r, ""]));
+    }
+    const altre = pol.configurazioni.map((_, i) => i).filter(i => !usate.includes(i) && pol.campioni.some(c => c[4] === i)).length;
+    nota("Velocità della barca sul fondo in nodi, per angolo dal vento (righe) e vento vero fino a 30 nodi (colonne). Record = la media più alta tenuta per 30 secondi in tutte le registrazioni con queste vele; si aggiorna da solo a ogni uscita." + (altre ? " Nel telefono ci sono record anche per altre " + altre + (altre === 1 ? " combinazione" : " combinazioni") + " di vele (scheda Polari)." : ""));
   }
 
   // ---------- Registro ----------

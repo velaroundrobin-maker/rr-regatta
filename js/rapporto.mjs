@@ -75,22 +75,33 @@ export function prove(eventi, registro, f) {
   return out;
 }
 
-// Vele usate: dai cambi di vele registrati (eventi «Vele: …») e dai punti delle polari della sessione.
+// Vele usate: dai cambi di vele e di propulsione registrati (eventi «Vele: …», «Propulsione: a motore / a vela»)
+// e dai punti delle polari della sessione.
 export function veleUsate(eventi, f, puntiPolari = [], nomi = []) {
-  const cambi = [...eventi].filter(e => /^Vele: /.test(e.testo)).sort((a, b) => a.t - b.t);
+  const cambi = [...eventi].filter(e => /^(Vele: |Propulsione: )/.test(e.testo)).sort((a, b) => a.t - b.t);
   const durate = new Map(), ordine = [];
   const somma = (nome, ms) => { if (ms <= 0) return; if (!durate.has(nome)) { durate.set(nome, 0); ordine.push(nome); } durate.set(nome, durate.get(nome) + ms); };
-  let attuale = null, da = f.da;
+  let vele = null, motore = false, da = f.da;
+  const attuale = () => motore ? "A motore" : vele;
+  const applica = e => { if (e.testo.startsWith("Vele: ")) { vele = e.testo.slice(6); motore = false; } else motore = /a motore/.test(e.testo); };
   for (const e of cambi) {
-    if (e.t <= f.da) { attuale = e.testo.slice(6); continue; }
+    if (e.t <= f.da) { applica(e); continue; }
     if (e.t > f.a) break;
-    if (attuale) somma(attuale, e.t - da);
-    attuale = e.testo.slice(6); da = e.t;
+    if (attuale()) somma(attuale(), e.t - da);
+    applica(e); da = e.t;
   }
-  if (attuale) somma(attuale, f.a - da);
+  if (attuale()) somma(attuale(), f.a - da);
   const polari = new Map();
   for (const c of puntiPolari) if (dentro(c[0], f)) polari.set(c[4], (polari.get(c[4]) || 0) + 2000);
-  return {aBordo: ordine.map(nome => ({nome, ms: durate.get(nome)})), polari: [...polari].map(([k, ms]) => ({nome: nomi[k] ?? "?", ms})).sort((a, b) => b.ms - a.ms)};
+  return {aBordo: ordine.map(nome => ({nome, ms: durate.get(nome)})), polari: [...polari].map(([k, ms]) => ({k, nome: nomi[k] ?? "?", ms})).sort((a, b) => b.ms - a.ms)};
+}
+
+// Finestre per i rapporti e per le polari della sessione: le registrazioni (la più recente per ultima);
+// per i dati di versioni senza registrazioni, le uscite separate da pause di oltre 2 ore.
+export function finestre(s, pol, adesso = Date.now()) {
+  const reg = (s.registrazioni || []).map(r => ({da: r.inizio, a: r.fine ?? adesso, modo: r.modo, inCorso: r.fine === null}));
+  if (reg.length) return reg;
+  return uscite(tempiDati(s, pol)).map(u => ({...u, modo: null, inCorso: false}));
 }
 
 // Eventi del vento (tarature, andature dichiarate, intensità, allarmi) e modalità usate.

@@ -178,3 +178,13 @@ test("taratura dalla bolina stretta dichiarata: una mura usa l'angolo presunto, 
   const lontane = taratura({iniziale: {dir: 2, metodo: "bolina", t: T + 30 * min}, rif: {dritta: {cog: 317, t: T + 30 * min}, sinistra: {cog: 41, t: T}}, angoloVirata: 90});
   assert.equal(lontane.fonte, "bolina");
 });
+
+test("vento medio: subito dopo la taratura il riferimento è la taratura", () => {
+  // Tarato a 0°; poi 2 minuti di bolina con il vento che ruota fino a 4°.
+  const c = Array.from({length: 120}, (_, i) => ({t: i * 1000, dir: 4 * i / 119}));
+  const a = analisiVento(c, 119000, {tarDir: 0});
+  assert.ok(a.medio > 0.3 && a.medio < 1.5, "riferimento vicino alla taratura: " + a.medio);
+  assert.ok(a.salto > 2.5 && a.salto < 3.6, "salto visibile: " + a.salto);
+  assert.equal(analisiVento([], 1000, {tarDir: 7}).medio, 7);
+  assert.equal(classificaVento(Array.from({length: 150}, (_, i) => ({t: i * 2000, dir: 200})), 298000).tipo, "stabile", "prima stima dopo 4-5 minuti");
+});

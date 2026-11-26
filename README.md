@@ -4,6 +4,15 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.11
+
+- Registrazione per modalità: entrando si sceglie «Registrare la traccia? Sì / No»; traccia, dati ogni 2 s e punti delle polari si salvano solo durante una registrazione («● REG» in alto, Stop in Navigazione/Polari o dalla pagina iniziale).
+- «Parametri» in tutte le modalità (strumenti, preparazione, scheda Regata): a vela / a motore, vento vero dichiarato, taratura, vele. La taratura a motore mette «a motore»; le polari si registrano solo a vela.
+- Polari in ogni modalità, per combinazione di vele; vento vero fino a 30 nodi; sessione = registrazione, confrontata con il record delle stesse vele.
+- Rapporto PDF per registrazione, con le sole sezioni della modalità; polari della sessione e record per le vele usate; tempo a motore.
+- Vento: riferimento = taratura appena fatta, poi media delle stime; vento attuale su 30 s; scarso da 4° (allarme 4° per 20 s); tipo di vento: prima stima dopo 4 minuti.
+- Layout: comandi della mappa a tutta altezza, pulsanti in basso uguali, barra di Android sempre visibile a schermo intero, tasto Indietro dentro l'app, GPS acceso/spento nelle impostazioni.
+
 ## Versione 0.10
 
 - Taratura del vento in due modi: prua al vento a motore o bolina stretta (mure a sinistra o a dritta); con le due mure il vento è la bisettrice e l'angolo di virata è misurato. Le altre andature sono indicazioni dell'equipaggio. Tolto il vento «a mano».

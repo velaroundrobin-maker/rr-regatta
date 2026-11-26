@@ -39,7 +39,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <body>
 <header>
   <img src="../round-robin-logo.png" alt="Logo Round Robin">
-  <div><strong>RR Regatta</strong><small>Round Robin Labs™ · guida alla versione 0.10</small></div>
+  <div><strong>RR Regatta</strong><small>Round Robin Labs™ · guida alla versione 0.11</small></div>
   <a href="../">Apri l'app</a>
 </header>
 <main>
@@ -70,7 +70,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <tr><td><strong>Allenamento</strong></td><td>Campi di boe pronti o disegnati, prove di partenza, cronometro.</td></tr>
   <tr><td><strong>Polari</strong></td><td>Misura delle velocità della barca per angolo dal vento, intensità e vele: record e sessione.</td></tr>
 </table>
-<p>In tutte le modalità ci sono il <strong>timer di partenza</strong> e il <strong>cronometro</strong>. Dopo ogni uscita l'app prepara un <strong>rapporto PDF</strong> con traccia, velocità, prove, vento, vele e polari.</p>
+<p>In tutte le modalità ci sono il <strong>timer di partenza</strong>, il <strong>cronometro</strong> e il pulsante <strong>Parametri</strong> per dire all'app vento vero e vele. Ogni uscita si può <strong>registrare</strong>: dalla registrazione l'app prepara un <strong>rapporto PDF</strong> e aggiorna le <strong>polari</strong> della barca, per ogni combinazione di vele.</p>
 <div class="riquadro">
   <p><strong>Due regole.</strong> Ogni valore dice da dove viene: misurato dal telefono, calcolato, stimato, indicato dall'equipaggio o preso dalle istruzioni di regata. Le decisioni restano dell'equipaggio.</p>
 </div>
@@ -86,16 +86,27 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 
 <h3>Come si usa</h3>
 <ol>
-  <li><strong>Pagina iniziale</strong>: il GPS si accende da solo. Tocca una modalità, leggi la spiegazione e premi <b class="tasto">Conferma</b>.</li>
+  <li><strong>Pagina iniziale</strong>: il GPS si accende da solo. Tocca una modalità, leggi la spiegazione, rispondi a <strong>Registrare la traccia?</strong> (<b class="tasto">Sì</b> o <b class="tasto">No</b>) e premi <b class="tasto">Conferma</b>.</li>
   <li><strong>Preparazione</strong>: pochi passi, ciascuno con i suoi pulsanti; quando un passo è fatto compare la spunta. I passi «facoltativo» si possono saltare. Alla fine, <b class="tasto">Vai agli strumenti</b>.</li>
   <li><strong>Strumenti</strong>: lo schermo da guardare navigando.</li>
 </ol>
 <p>In basso ci sono le schede: <strong>Strumenti</strong>, <strong>Preparazione</strong>, la scheda della modalità (<strong>Campo</strong>, <strong>Regata</strong> o <strong>Polari</strong>) e <strong>Menu</strong>, che torna alla pagina iniziale.</p>
-<p>L'app si usa <strong>in verticale</strong> e a <strong>schermo intero</strong>; lo schermo resta acceso da solo, perché a schermo spento il GPS si ferma e il timer non suona. <b class="tasto">Reset</b>, in alto in ogni schermata, cancella quello che hai preparato nella modalità (vento, andatura, timer, boe, arrivo); le polari restano.</p>
+<p>L'app si usa <strong>in verticale</strong> e a <strong>schermo intero</strong>; la barra di Android in basso resta visibile e il tasto Indietro torna alla schermata precedente dell'app. Lo schermo resta acceso da solo, perché a schermo spento il GPS si ferma e il timer non suona. <b class="tasto">Reset</b>, in alto in ogni schermata, cancella quello che hai preparato nella modalità (vento, andatura, timer, boe, arrivo); polari e registrazioni restano.</p>
+
+<h3>La registrazione</h3>
+<p>Solo durante una registrazione l'app salva la traccia, i dati ogni 2 secondi e i punti delle polari. Mentre registra, in alto c'è <strong>● REG</strong>. Cambiando modalità la registrazione precedente si chiude e l'app chiede di nuovo. Per fermarla: <b class="tasto">Stop registrazione</b> in Navigazione e Polari, oppure dalla pagina iniziale. Senza registrazione gli strumenti funzionano lo stesso, ma non resta niente.</p>
+
+<h3>I pulsanti in basso</h3>
+<ul>
+  <li><b class="tasto">Parametri</b>, in tutte le modalità: vento vero, taratura della direzione, vele a riva, a vela o a motore (capitolo 3). Sotto il nome ricorda il vento e le vele indicati.</li>
+  <li><b class="tasto">Andatura</b>: l'indicazione dell'equipaggio quando il vento gira.</li>
+  <li><b class="tasto">Registra</b> / <b class="tasto">Stop registrazione</b> in Navigazione e Polari; <b class="tasto">Boa passata</b> in Regata e Allenamento.</li>
+</ul>
+<p>Il GPS si spegne e si riaccende in «File, registro e impostazioni»; se è spento, in basso compare <b class="tasto">Accendi GPS</b>.</p>
 
 <h3>La mappa</h3>
 <p>Nord in alto, gradi e punti cardinali sui bordi, la barca, la scala e la <strong>freccia del vento</strong> sul bordo da cui arriva. La freccia indica <strong>dove va</strong> il vento; il numero accanto («VENTO 020°») è la direzione <strong>da cui arriva</strong>. Sotto la mappa c'è la posizione in gradi e primi.</p>
-<p>I comandi sono nella colonna a destra: <b class="tasto">+</b> e <b class="tasto">−</b> per la scala, <b class="tasto">Timer</b> per timer e cronometro (quando il timer è avviato, sul pulsante c'è il tempo che manca, bordato di rosso). In Regata e Allenamento ci sono anche <b class="tasto">Tutto</b> (inquadra barca e boe), <b class="tasto">Barca</b> (torna a seguire la barca) e <b class="tasto">Disegna</b>. Sulla mappa si apre un riquadro alla volta: premendo un altro pulsante, quello aperto si chiude.</p>
+<p>I comandi sono nella colonna a destra, che occupa tutta l'altezza della mappa: <b class="tasto">+</b> e <b class="tasto">−</b> per la scala, <b class="tasto">Timer</b> per timer e cronometro (quando il timer è avviato, sul pulsante c'è il tempo che manca, bordato di rosso). In Regata e Allenamento ci sono anche <b class="tasto">Tutto</b> (inquadra barca e boe), <b class="tasto">Barca</b> (torna a seguire la barca) e <b class="tasto">Disegna</b>. Sulla mappa si apre un riquadro alla volta: premendo un altro pulsante, quello aperto si chiude.</p>
 
 <h2 id="futuro">2. Sviluppi futuri</h2>
 <p>Oggi l'app lavora senza strumenti elettronici di bordo. Il passo successivo è costruire <strong>sensori nostri</strong>, collegati al telefono senza fili:</p>
@@ -123,7 +134,17 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <tr><td><strong>Prua al vento</strong> (a motore)</td><td>Prua esattamente al vento, rotta costante per una decina di secondi sopra 1,5 nodi, poi <b class="tasto">Prua al vento a motore</b>. È il metodo più preciso.</td></tr>
   <tr><td><strong>Bolina stretta</strong> (a vela)</td><td>In bolina stretta ben regolata, rotta costante, premi <b class="tasto">Bolina stretta mure a sinistra</b> o <b class="tasto">Bolina stretta mure a dritta</b>, secondo la mura su cui sei. Il vento è la rotta più o meno l'angolo di bolina della barca. Dopo la virata premi l'altra mura: il vento diventa la bisettrice delle due rotte e l'app misura l'angolo di virata reale.</td></tr>
 </table>
-<p>Il vento gira: ripeti la taratura quando cambia in modo evidente. L'app indica sempre come e da quanto tempo è stata fatta.</p>
+<p>Il vento gira: ripeti la taratura quando cambia in modo evidente. L'app indica sempre come e da quanto tempo è stata fatta. Anche la taratura a motore mette l'app in «a motore»: le polari ripartono quando indichi «A vela».</p>
+
+<h3 id="parametri">Aggiorna parametri</h3>
+<p><b class="tasto">Parametri</b> (in basso negli strumenti, nella preparazione e nella scheda Regata) apre un pannello per dire all'app che cosa è cambiato:</p>
+<ul>
+  <li><strong>A vela / A motore</strong>: a motore le polari non si registrano;</li>
+  <li><strong>vento vero</strong> in nodi, stimato dall'equipaggio o letto all'anemometro a barca ferma: per esempio da 5 a 15 nodi quando rinforza. Per le polari va riconfermato ogni 20 minuti (si cambia nella scheda Polari);</li>
+  <li><strong>direzione del vento</strong>: i due modi di taratura;</li>
+  <li><strong>vele a riva</strong>: vela di prua, randa, vele colorate.</li>
+</ul>
+<p>In fondo al pannello l'app dice se le polari si stanno registrando o perché sono in pausa. <b class="tasto">Fatto</b> (o il tasto Indietro) lo chiude.</p>
 
 <h3>Le indicazioni dell'equipaggio</h3>
 <p>Quando il vento gira e l'app non può vederlo (per esempio al lasco), l'equipaggio può indicarlo: <b class="tasto">Andatura</b>, poi l'andatura e le mure su cui siete. L'app ricava il vento dalla rotta: se si scosta di più di 10° da quello in uso, il vento si aggiorna; altrimenti resta quello. Le andature sono larghe una trentina di gradi: è un'indicazione, non una taratura.</p>
@@ -156,14 +177,15 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <li><b class="tasto">Boa passata</b> dopo ogni boa; all'ultima tappa <b class="tasto">Taglia il traguardo</b> registra ora e posizione dell'arrivo.</li>
 </ul>
 <h3>Salti di vento</h3>
-<p>Le stime partono con la taratura di bolina stretta (o con «Bolina stretta» nel pulsante <b class="tasto">Andatura</b>): il pulsante diventa <b class="tasto">BOLINA STRETTA ✓</b>. Da lì l'app stima il vento dalla rotta, scartando virate e tratti instabili; dopo una virata riconosce le mure da sola. Se la barca poggia a lungo, le stime si fermano.</p>
+<p>Le stime partono con la taratura di bolina stretta (o con «Bolina stretta» nel pulsante <b class="tasto">Andatura</b>): il pulsante diventa <b class="tasto">BOLINA STRETTA ✓</b>. Da lì, a ogni secondo, l'app ricava il vento dalla rotta, scartando virate e tratti instabili; dopo una virata riconosce le mure da sola. Se la barca poggia a lungo, le stime si fermano.</p>
 <ul>
-  <li><strong>Vento medio</strong>: media degli ultimi 5 minuti (3 o 10 nelle impostazioni). Il salto è la differenza tra gli ultimi 20 secondi e la media.</li>
+  <li><strong>Vento attuale</strong>: media degli ultimi 30 secondi, abbastanza da togliere l'onda, abbastanza poco da essere pronto.</li>
+  <li><strong>Vento medio</strong>, il riferimento: subito dopo la taratura è la taratura stessa; poi passa via via alla media delle stime degli ultimi 5 minuti (3 o 10 nelle impostazioni). Così i salti si vedono dal primo bordo, senza aspettare.</li>
   <li><strong>Buono</strong>: il vento è girato a favore, puoi orzare. <strong>Scarso</strong>: è girato contro, devi poggiare; valuta la virata.</li>
-  <li><strong>Allarme SCARSO</strong>: scarso oltre la soglia (6°) per 20 secondi. Schermo rosso, vibrazione e suono; premi <b class="tasto">Visto</b>.</li>
+  <li><strong>Allarme SCARSO</strong>: scarso di almeno 4° per 20 secondi (si cambia nelle impostazioni). Per esempio il vento ruota di 4° in un paio di minuti. Schermo rosso, vibrazione e suono; premi <b class="tasto">Visto</b>.</li>
   <li><strong>Allarme VENTO RUOTATO</strong>: il vento medio gira di almeno 8° per un minuto; può essere l'inizio di una rotazione persistente.</li>
 </ul>
-<p>Dopo almeno 8 minuti di bolina, nella scheda Regata (sezione Vento) l'app classifica il vento e dà il consiglio dei manuali di tattica: <strong>oscillante</strong> (vira sugli scarsi oltre la media, resta al centro), <strong>persistente</strong> (vai verso il lato in cui gira, senza superare la lay-line) o <strong>stabile</strong> (conta la velocità, poche virate).</p>
+<p>Nella scheda Regata (sezione Vento) l'app classifica anche il <strong>tipo di vento</strong> e dà il consiglio dei manuali di tattica. La prima stima arriva dopo 4 minuti di bolina; diventa affidabile verso i 10 minuti, quando si è vista almeno un'oscillazione intera: <strong>oscillante</strong> (vira sugli scarsi oltre la media, resta al centro), <strong>persistente</strong> (vai verso il lato in cui gira, senza superare la lay-line) o <strong>stabile</strong> (conta la velocità, poche virate).</p>
 <h3>Indicazioni tattiche</h3>
 <ul>
   <li><strong>Mure favorite</strong>: la mura che punta più verso la boa, con i gradi di vantaggio.</li>
@@ -195,21 +217,22 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <p>Per le prove di partenza: timer con distanza e tempo dalla linea; per misurare i tratti, il cronometro con i parziali (capitolo 7).</p>
 
 <h2 id="polari">6. Polari</h2>
-<p>Le polari sono le velocità della barca a ogni angolo dal vento, per intensità del vento e combinazione di vele. Dicono se si sta andando bene, quali vele rendono di più e qual è l'angolo migliore di bolina e di poppa.</p>
+<p>Le polari sono le velocità della barca a ogni angolo dal vento, per intensità del vento (da 4 a 30 nodi) e combinazione di vele. Dicono se si sta andando bene, quali vele rendono di più e qual è l'angolo migliore di bolina e di poppa.</p>
+<p>Si registrano <strong>in ogni modalità</strong>, durante una registrazione, quando ci sono: taratura della direzione, vento vero indicato, vele, «A vela», rotta e velocità stabili. La modalità Polari serve per un'uscita dedicata, un angolo alla volta.</p>
 <h3>Un'uscita per le polari</h3>
 <ol>
   <li><strong>Direzione del vento</strong>: prua al vento a motore. Vale anche la bolina stretta dichiarata su <strong>tutte e due le mure</strong>; una mura sola no, perché l'angolo di bolina sarebbe presunto, non misurato. La taratura vale 20 minuti (da 10 a 45 nella scheda Polari): poi la registrazione va in pausa finché non la rifai.</li>
   <li><strong>Intensità</strong>: a barca ferma leggi l'anemometro di coperta e premi <b class="tasto">Inserisci il vento</b>. A vela l'anemometro legge il vento apparente: non va usato. Aggiornala quando il vento cambia.</li>
-  <li><strong>Vele a riva</strong>: vela di prua (J1, J2, J3, Tormentina), randa (piena, 1 mano, 2 mani), vele colorate (nessuna, Spinnaker, Gennaker, Code 0). Dopo un cambio l'app aspetta un minuto.</li>
-  <li><b class="tasto">Avvia la registrazione</b> e naviga un angolo alla volta, almeno un minuto per mura, su tutte e due le mure: bolina stretta, 50°, 60°, 75°, 90°, 110°, 135°, 150°, 165°.</li>
+  <li><strong>Vele a riva</strong>: vela di prua (J1, J2, J3, Tormentina), randa (piena, 1 mano, 2 mani), vele colorate (nessuna, Spinnaker, Gennaker, Code 0), e <strong>A vela</strong>. Dopo un cambio l'app aspetta un minuto.</li>
+  <li>Con la registrazione attiva, naviga un angolo alla volta, almeno un minuto per mura, su tutte e due le mure: bolina stretta, 50°, 60°, 75°, 90°, 110°, 135°, 150°, 165°.</li>
 </ol>
 <p>L'app registra un punto ogni 2 secondi, solo con rotta e velocità stabili da 20 secondi. Se un tratto è venuto male: <b class="tasto">Scarta gli ultimi 5 minuti</b>.</p>
 <h3>Record e sessione</h3>
 <ul>
-  <li><strong>Record</strong>: la polare massima della barca, con tutte le uscite. Per ogni angolo vale la <strong>velocità media più alta tenuta per 30 secondi</strong>, così le punte dell'onda non contano.</li>
-  <li><strong>Sessione</strong>: la stessa misura, solo nell'uscita in corso o nell'ultima. Più di 2 ore senza dati separano due uscite. Nel diagramma il record è in grigio tratteggiato; nella tabella ★ segna i record fatti in quella uscita.</li>
+  <li><strong>Record</strong>: la polare massima della barca per ogni combinazione di vele, da tutte le registrazioni. Per ogni angolo vale la <strong>velocità media più alta tenuta per 30 secondi</strong>, così le punte dell'onda non contano. È il nostro archivio: si aggiorna da solo a ogni uscita.</li>
+  <li><strong>Sessione</strong>: la stessa misura nella registrazione in corso o nell'ultima, confrontata con il record delle stesse vele (in grigio tratteggiato); nella tabella ★ segna i record nuovi.</li>
 </ul>
-<p>Nel diagramma il vento viene dall'alto e la distanza dal centro è la velocità; cerchi ogni 2 nodi, raggi ogni 30°. Tra parentesi i valori con meno di 30 secondi di dati. Sotto: angolo migliore di bolina e di poppa con la VMC; <b class="tasto">Usa … come angolo di virata in regata</b> passa il valore alla Regata. Durante la registrazione, sullo schermo Strumenti vedi l'angolo dal vento, il record a quell'angolo e a quanti per cento state andando.</p>
+<p>Nel diagramma il vento viene dall'alto e la distanza dal centro è la <strong>velocità della barca</strong> (cerchi ogni 2 nodi): il vento si sceglie con i pulsanti «Vento vero», da 4 a 30 nodi. Raggi ogni 30°. Tra parentesi i valori con meno di 30 secondi di dati. Sotto: angolo migliore di bolina e di poppa con la VMC; <b class="tasto">Usa … come angolo di virata in regata</b> passa il valore alla Regata. Durante la registrazione, sullo schermo Strumenti vedi l'angolo dal vento, il record a quell'angolo e a quanti per cento state andando.</p>
 
 <h2 id="resto">7. Timer, rapporto, dati e impostazioni</h2>
 <h3>Timer di partenza</h3>
@@ -223,15 +246,15 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <p><b class="tasto">Avvia</b>, <b class="tasto">Stop</b>, <b class="tasto">Riprendi</b>, <b class="tasto">Azzera</b>. <b class="tasto">Parziale</b> registra un tempo intermedio con metri percorsi e velocità media dal parziale precedente.</p>
 
 <h3 id="rapporto">Rapporto PDF dell'uscita</h3>
-<p>Dalla pagina iniziale, <strong>File, registro e impostazioni</strong> → scegli l'uscita → <b class="tasto">Scarica il rapporto PDF</b> (o, dalla scheda Polari, <b class="tasto">Rapporto PDF dell'uscita</b> per l'ultima). Il file finisce nei Download del telefono. Contiene:</p>
+<p>Dalla pagina iniziale, <strong>File, registro e impostazioni</strong> → scegli la registrazione → <b class="tasto">Scarica il rapporto PDF</b> (o, dalla scheda Polari, <b class="tasto">Rapporto PDF dell'uscita</b> per l'ultima). Il file finisce nei Download del telefono. Contiene solo quello che serve alla modalità registrata; vele e polari ci sono sempre:</p>
 <ul>
   <li><strong>riepilogo</strong>: durata, tempo in movimento, distanza, velocità media e massima (media su 10 secondi), tempo in bolina stretta;</li>
   <li><strong>traccia</strong> con boe, inizio, fine e punto della velocità massima;</li>
   <li><strong>velocità nel tempo</strong>;</li>
-  <li><strong>prove</strong>: partenza, boe e arrivo con tempi, distanze e velocità medie di ogni tratto;</li>
-  <li><strong>vento</strong>: tarature, indicazioni dell'equipaggio e allarmi;</li>
-  <li><strong>vele</strong> usate e per quanto tempo;</li>
-  <li><strong>polari della sessione</strong> confrontate con il record, e la <strong>tabella dei record</strong>;</li>
+  <li><strong>prove</strong> (Regata e Allenamento): partenza, boe e arrivo con tempi, distanze e velocità medie di ogni tratto;</li>
+  <li><strong>vento</strong>: tarature, vento vero indicato, indicazioni dell'equipaggio e allarmi;</li>
+  <li><strong>vele</strong> usate e per quanto tempo, e il tempo a motore;</li>
+  <li><strong>polari della sessione</strong> per ogni combinazione di vele, confrontate con il record delle stesse vele, e la <strong>tabella dei record</strong> di quelle vele;</li>
   <li><strong>registro</strong> degli eventi.</li>
 </ul>
 
@@ -245,7 +268,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 
 <h3>Impostazioni e reset</h3>
 <ul>
-  <li><strong>Schermo intero</strong>, <strong>schermo sempre acceso</strong>, <strong>traccia sulla mappa</strong>, intervallo della <strong>conferma dell'andatura</strong>.</li>
+  <li><strong>Schermo intero</strong>, <strong>GPS</strong> acceso o spento, <strong>schermo sempre acceso</strong>, <strong>traccia sulla mappa</strong>, intervallo della <strong>conferma dell'andatura</strong>.</li>
   <li><b class="tasto">Reset generale</b>: azzera vento, boe segnate, arrivo, timer, traccia e registro; tiene percorso, dati della barca e polari. <b class="tasto">Annulla l'ultimo reset</b> riporta tutto com'era.</li>
   <li><strong>Registro</strong>: gli eventi con l'ora. <strong>Diagnostica GPS</strong>: verifica il GPS del telefono.</li>
 </ul>
@@ -255,7 +278,8 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <li>Rotta e velocità sono <strong>sul fondo</strong>: con la corrente differiscono da prua e velocità sull'acqua, e falsano un po' vento e polari.</li>
   <li>Il vento è <strong>stimato</strong>: la qualità dipende dalla taratura. Se qualcosa non torna, ritara.</li>
   <li>Il GPS del telefono sbaglia di qualche metro: le distanze piccole, come dalla linea negli ultimi secondi, vanno lette con prudenza.</li>
-  <li>Se lo schermo si spegne o apri un'altra app, GPS, stime e beep si fermano finché non torni.</li>
+  <li>Se lo schermo si spegne o apri un'altra app, GPS, stime, beep e registrazione si fermano finché non torni.</li>
+  <li>Il telefono tiene le ultime 8 ore circa di dati registrati: scarica il rapporto o esporta dopo ogni uscita.</li>
   <li>Controlla che le istruzioni di regata permettano i dispositivi elettronici a bordo.</li>
 </ul>
 
@@ -271,12 +295,13 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <tr><td>Angolo di virata</td><td>L'angolo tra le rotte di bolina stretta sulle due mure.</td></tr>
   <tr><td>Barca comitato, pin</td><td>Gli estremi della linea di partenza.</td></tr>
   <tr><td>Boa virtuale</td><td>Punto sulla mappa usato come boa negli esercizi.</td></tr>
-  <tr><td>Polare record</td><td>Per ogni angolo, la velocità media più alta tenuta per 30 secondi in tutte le uscite.</td></tr>
-  <tr><td>Polare della sessione</td><td>La stessa misura, nella sola uscita in corso o nell'ultima.</td></tr>
-  <tr><td>Uscita</td><td>Un periodo di dati senza pause di oltre 2 ore.</td></tr>
+  <tr><td>Polare record</td><td>Per ogni angolo e combinazione di vele, la velocità media più alta tenuta per 30 secondi in tutte le registrazioni.</td></tr>
+  <tr><td>Polare della sessione</td><td>La stessa misura, nella sola registrazione in corso o nell'ultima.</td></tr>
+  <tr><td>Registrazione</td><td>Il periodo in cui l'app salva traccia, dati e polari; una per modalità. È la «sessione» del rapporto e delle polari.</td></tr>
+  <tr><td>Parametri</td><td>Vento vero, direzione, vele, a vela o a motore: quello che l'equipaggio dice all'app.</td></tr>
 </table>
 
-<p class="piede">RR Regatta · Round Robin Labs™, laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.10. Domande, problemi e suggerimenti: scrivete a Marco.</p>
+<p class="piede">RR Regatta · Round Robin Labs™, laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.11. Domande, problemi e suggerimenti: scrivete a Marco.</p>
 </main>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.10";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.11";
 
 export const MURE = ["dritta", "sinistra"];
 
@@ -81,14 +81,25 @@ export function mediaVento(campioni, adesso, finestraMs) {
   const v = campioni.filter(c => adesso - c.t <= finestraMs);
   return v.length ? {dir: circularMean(v.map(c => c.dir)), n: v.length} : {dir: null, n: 0};
 }
-export function analisiVento(campioni, adesso, {mediaMs = 5 * 60000, recenteMs = 20000, tarDir = null} = {}) {
-  const m = mediaVento(campioni, adesso, mediaMs);
+// Vento attuale: media delle stime degli ultimi 30 secondi (non istantaneo, ma pronto).
+// Vento medio (riferimento per buono e scarso): media delle stime degli ultimi «mediaMs». Finché le stime non coprono
+// tutta la finestra, la taratura (prua al vento o bolina) pesa per la parte scoperta: subito dopo la taratura il
+// riferimento è la taratura stessa, e ogni salto si vede dal primo bordo, senza aspettare.
+export function analisiVento(campioni, adesso, {mediaMs = 5 * 60000, recenteMs = 30000, tarDir = null} = {}) {
+  const v = campioni.filter(c => adesso - c.t <= mediaMs);
   const r = mediaVento(campioni, adesso, recenteMs);
   const ultimo = campioni.at(-1);
   const recenteValido = r.n >= 5 && ultimo && adesso - ultimo.t < 6000;
-  const medio = m.dir ?? tarDir;
-  const primo = campioni.find(c => adesso - c.t <= mediaMs);
-  return {medio, nMedia: m.n, copertura: primo ? (adesso - primo.t) / mediaMs : 0, recente: recenteValido ? r.dir : null,
+  const copertura = v.length ? Math.min(1, (adesso - v[0].t) / mediaMs) : 0;
+  let medio = null;
+  if (v.length) {
+    const m = circularMean(v.map(c => c.dir));
+    if (Number.isFinite(tarDir) && copertura < 1) {
+      const x = copertura * Math.cos(rad(m)) + (1 - copertura) * Math.cos(rad(tarDir)), y = copertura * Math.sin(rad(m)) + (1 - copertura) * Math.sin(rad(tarDir));
+      medio = norm(Math.atan2(y, x) * 180 / Math.PI);
+    } else medio = m;
+  } else medio = Number.isFinite(tarDir) ? tarDir : null;
+  return {medio, nMedia: v.length, copertura, recente: recenteValido ? r.dir : null,
     salto: recenteValido && Number.isFinite(medio) ? delta(r.dir, medio) : null};
 }
 // In bolina: mure a dritta, vento che gira a destra = buono; mure a sinistra, il contrario.
@@ -100,10 +111,18 @@ export function buonoScarso(salto, mura) {
 
 // ---------------- Tipo di vento ----------------
 // Regressione lineare della direzione nel tempo: tendenza (persistente) contro oscillazioni attorno alla media.
-export function classificaVento(campioni, adesso, {finestraMs = 20 * 60000, minDurataMs = 8 * 60000, minCampioni = 30} = {}) {
+// Prima stima dopo 4 minuti di bolina (si vede una tendenza o mezza oscillazione); diventa affidabile verso i 10 minuti,
+// quando si è vista almeno un'oscillazione intera.
+export function classificaVento(campioni, adesso, {finestraMs = 20 * 60000, minDurataMs = 4 * 60000, minCampioni = 30} = {}) {
   const v = campioni.filter(c => adesso - c.t <= finestraMs);
   if (v.length < minCampioni || v.at(-1).t - v[0].t < minDurataMs)
-    return {tipo: "in raccolta", testo: "Servono almeno " + Math.round(minDurataMs / 60000) + " minuti di bolina stretta per capire il tipo di vento."};
+    return {tipo: "in raccolta", testo: "Prima stima dopo " + Math.round(minDurataMs / 60000) + " minuti di bolina stretta. Il vento medio e i salti ci sono già."};
+  const r = classifica(v);
+  const min = Math.round((v.at(-1).t - v[0].t) / 60000);
+  if (min < 10) r.testo = "Prima stima (" + min + " min): " + r.testo.charAt(0).toLowerCase() + r.testo.slice(1);
+  return r;
+}
+function classifica(v) {
   const m = circularMean(v.map(c => c.dir));
   const t0 = v[0].t, xs = v.map(c => (c.t - t0) / 60000), ys = v.map(c => delta(c.dir, m));
   const n = xs.length, mx = xs.reduce((a, b) => a + b) / n, my = ys.reduce((a, b) => a + b) / n;

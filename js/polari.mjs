@@ -2,20 +2,20 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.10";
+import {delta, circularMean} from "./engine.mjs?v=0.11";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
 export const PRUA = ["J1", "J2", "J3", "Tormentina"];
 export const RANDA = ["Piena", "1 mano", "2 mani"];
 export const PORTANTI = ["Nessuna", "Spinnaker", "Gennaker", "Code 0"];
-export const CLASSI_VENTO = [4, 6, 8, 10, 12, 14, 16, 20, 25];
+export const CLASSI_VENTO = [4, 6, 8, 10, 12, 14, 16, 20, 25, 30]; // nodi di vento vero; oltre i 30 non si registra
 export const CLASSI_ANGOLO = [30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 110, 120, 135, 150, 165, 180];
 export const MIN_PUNTI = 15;          // 30 secondi di navigazione stabile per casella
 export const MAX_CAMPIONI = 30000;    // circa 16 ore a un punto ogni 2 secondi
 
 export function nuovePolari() {
   return {formato: "rr-regatta-polari", versione: 1, barca: "", configurazioni: [], campioni: [], letture: [],
-    vele: {prua: "J1", randa: "Piena", portante: "Nessuna"}, vento: null,
+    vele: {prua: "J1", randa: "Piena", portante: "Nessuna"}, vento: null, propulsione: "vela",
     imp: {validitaMin: 20}};
 }
 export function verificaPolari(obj) {
@@ -29,6 +29,7 @@ export function verificaPolari(obj) {
   if (!PORTANTI.includes(obj.vele.portante)) obj.vele.portante = "Nessuna";
   obj.imp = {...n.imp, ...(obj.imp || {})};
   obj.vento ??= null;
+  obj.propulsione = obj.propulsione === "motore" ? "motore" : "vela";
   obj.campioni = obj.campioni.filter(c => Array.isArray(c) && c.length >= 5 && c.every(Number.isFinite) && c[4] >= 0 && c[4] < obj.configurazioni.length);
   return obj;
 }
@@ -57,7 +58,7 @@ export function indiceVele(pol, vele) {
 export function ventoVero(letto, metodo, sog) {
   if (!Number.isFinite(letto) || letto < 0) return null;
   if (metodo === "motore") return Number.isFinite(sog) ? Math.max(0, letto - sog) : null;
-  return letto;
+  return letto; // a barca ferma, oppure dichiarato dall'equipaggio
 }
 export function classeVicina(valore, classi) {
   if (!Number.isFinite(valore)) return null;
@@ -67,7 +68,7 @@ export function classeVicina(valore, classi) {
 }
 // Limiti delle classi di vento: a metà fra una classe e la successiva.
 export function classeVento(tws) {
-  if (!Number.isFinite(tws) || tws < 3) return null;
+  if (!Number.isFinite(tws) || tws < 3 || tws > 32) return null;
   return classeVicina(tws, CLASSI_VENTO);
 }
 
@@ -81,7 +82,7 @@ export function valutaPunto({fixes, adesso, rif, vento, validitaMs, ultimoCambio
   if (Number.isFinite(rif.t) && adesso - rif.t > validitaMs) return {ok: false, motivo: "la taratura del vento ha " + Math.round((adesso - rif.t) / 60000) + " minuti: ritarala"};
   if (!vento || !Number.isFinite(vento.tws)) return {ok: false, motivo: "manca l'intensità del vento"};
   if (adesso - vento.t > validitaMs) return {ok: false, motivo: "l'intensità del vento ha " + Math.round((adesso - vento.t) / 60000) + " minuti: aggiornala"};
-  if (classeVento(vento.tws) === null) return {ok: false, motivo: "vento sotto i 3 nodi"};
+  if (classeVento(vento.tws) === null) return {ok: false, motivo: vento.tws > 32 ? "vento oltre i 30 nodi" : "vento sotto i 3 nodi"};
   if (ultimoCambioVele && adesso - ultimoCambioVele < 60000) return {ok: false, motivo: "vele appena cambiate: un minuto per regolarle"};
   const v = fixes.filter(f => adesso - f.received <= 20000 && Number.isFinite(f.cog) && Number.isFinite(f.sog));
   if (v.length < 14) return {ok: false, motivo: "pochi dati GPS"};

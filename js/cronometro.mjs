@@ -1,6 +1,6 @@
 // Timer di partenza, cronometro e distanza-tempo dalla linea (v0.6).
 // Timer: «zero» è l'istante della partenza; prima si conta alla rovescia, dopo si conta il tempo di regata.
-import {rad, norm} from "./engine.mjs?v=0.10";
+import {rad, norm} from "./engine.mjs?v=0.11";
 
 const MINUTO = 60000;
 export const MINUTI_SEGNALE = [5, 4, 3, 2, 1];
