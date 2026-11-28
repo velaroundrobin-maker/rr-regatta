@@ -28,11 +28,11 @@ test("punto accettato solo con rotta e velocità stabili da 20 secondi", () => {
   assert.equal(valutaPunto({...base, fixes: fx(i => i < 8 ? 315 : 45, () => 6)}).motivo, "rotta non ancora stabile da 20 secondi");
   assert.equal(valutaPunto({...base, fixes: fx(() => 90, i => 4 + i * 0.15)}).motivo, "velocità non ancora stabile");
   assert.equal(valutaPunto({...base, fixes: fx(() => 10, () => 3)}).motivo, "prua quasi al vento");
-  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso - 25 * 60000}, fixes: fx(() => 90, () => 6)}).motivo, /la taratura del vento ha 25 minuti/);
-  assert.match(valutaPunto({...base, vento: null, fixes: fx(() => 90, () => 6)}).motivo, /intensità/);
+  assert.equal(valutaPunto({...base, rif: {dir: 0, t: adesso - 90 * 60000}, vento: {tws: 10, t: adesso - 90 * 60000}, fixes: fx(() => 90, () => 6)}).ok, true, "taratura e vento vero di un'ora e mezza fa valgono");
+  assert.match(valutaPunto({...base, vento: null, fixes: fx(() => 90, () => 6)}).motivo, /vento vero/);
   assert.match(valutaPunto({...base, ultimoCambioVele: adesso - 10000, fixes: fx(() => 90, () => 6)}).motivo, /vele appena cambiate/);
-  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "andatura"}, fixes: fx(() => 90, () => 6)}).motivo, /taratura a motore/);
-  assert.match(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "bolina"}, fixes: fx(() => 90, () => 6)}).motivo, /due mure/);
+  assert.equal(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "andatura"}, fixes: fx(() => 90, () => 6)}).ok, true, "vale anche il vento dall'andatura");
+  assert.equal(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "bolina"}, fixes: fx(() => 90, () => 6)}).ok, true);
   assert.equal(valutaPunto({...base, rif: {dir: 0, t: adesso, fonte: "boline"}, fixes: fx(() => 90, () => 6)}).ok, true);
 });
 

@@ -4,6 +4,10 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.11.2
+
+- Polari agganciate al vento già in uso (vento medio aggiornato dalle stime di bolina, tarature, indicazioni dell'equipaggio): nessuna nuova taratura e nessuna scadenza per direzione e vento vero; valgono tutte le fonti. Tolta l'impostazione «valgono per N minuti».
+
 ## Versione 0.11.1
 
 - Taratura possibile da 0,7 nodi: rotta = media vettoriale delle velocità GPS, su 20 s sotto i 2 nodi (10 s sopra), scarto ammesso che cresce al calare della velocità, controllo che la barca non stia girando.

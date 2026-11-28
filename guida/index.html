@@ -39,7 +39,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <body>
 <header>
   <img src="../round-robin-logo.png" alt="Logo Round Robin">
-  <div><strong>RR Regatta</strong><small>Round Robin Labs™ · guida alla versione 0.11.1</small></div>
+  <div><strong>RR Regatta</strong><small>Round Robin Labs™ · guida alla versione 0.11.2</small></div>
   <a href="../">Apri l'app</a>
 </header>
 <main>
@@ -140,7 +140,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <p><b class="tasto">Parametri</b> (in basso negli strumenti, nella preparazione e nella scheda Regata) apre un pannello per dire all'app che cosa è cambiato:</p>
 <ul>
   <li><strong>A vela / A motore</strong>: a motore le polari non si registrano;</li>
-  <li><strong>vento vero</strong> in nodi, stimato dall'equipaggio o letto all'anemometro a barca ferma: per esempio da 5 a 15 nodi quando rinforza. Per le polari va riconfermato ogni 20 minuti (si cambia nella scheda Polari);</li>
+  <li><strong>vento vero</strong> in nodi, stimato dall'equipaggio o letto all'anemometro a barca ferma: per esempio da 5 a 15 nodi quando rinforza. Vale finché non lo cambi;</li>
   <li><strong>direzione del vento</strong>: i due modi di taratura;</li>
   <li><strong>vele a riva</strong>: vela di prua, randa, vele colorate.</li>
 </ul>
@@ -221,8 +221,8 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
 <p>Si registrano <strong>in ogni modalità</strong>, durante una registrazione, quando ci sono: taratura della direzione, vento vero indicato, vele, «A vela», rotta e velocità stabili. La modalità Polari serve per un'uscita dedicata, un angolo alla volta.</p>
 <h3>Un'uscita per le polari</h3>
 <ol>
-  <li><strong>Direzione del vento</strong>: prua al vento a motore. Vale anche la bolina stretta dichiarata su <strong>tutte e due le mure</strong>; una mura sola no, perché l'angolo di bolina sarebbe presunto, non misurato. La taratura vale 20 minuti (da 10 a 45 nella scheda Polari): poi la registrazione va in pausa finché non la rifai.</li>
-  <li><strong>Intensità</strong>: a barca ferma leggi l'anemometro di coperta e premi <b class="tasto">Inserisci il vento</b>. A vela l'anemometro legge il vento apparente: non va usato. Aggiornala quando il vento cambia.</li>
+  <li><strong>Direzione del vento</strong>: basta una taratura, a motore o di bolina stretta. Non va rifatta per le polari: l'app usa il vento già in uso, aggiornato dalle stime di bolina e dalle indicazioni dell'equipaggio.</li>
+  <li><strong>Intensità</strong>: a barca ferma leggi l'anemometro di coperta e premi <b class="tasto">Inserisci il vento</b>, oppure indicala stimata in «Parametri». A vela l'anemometro legge il vento apparente: non va usato. Vale finché non la cambi.</li>
   <li><strong>Vele a riva</strong>: vela di prua (J1, J2, J3, Tormentina), randa (piena, 1 mano, 2 mani), vele colorate (nessuna, Spinnaker, Gennaker, Code 0), e <strong>A vela</strong>. Dopo un cambio l'app aspetta un minuto.</li>
   <li>Con la registrazione attiva, naviga un angolo alla volta, almeno un minuto per mura, su tutte e due le mure: bolina stretta, 50°, 60°, 75°, 90°, 110°, 135°, 150°, 165°.</li>
 </ol>
@@ -301,7 +301,7 @@ b.tasto{display:inline-block;border:1px solid #777;background:#222;border-radius
   <tr><td>Parametri</td><td>Vento vero, direzione, vele, a vela o a motore: quello che l'equipaggio dice all'app.</td></tr>
 </table>
 
-<p class="piede">RR Regatta · Round Robin Labs™, laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.11.1. Domande, problemi e suggerimenti: scrivete a Marco.</p>
+<p class="piede">RR Regatta · Round Robin Labs™, laboratorio sperimentale di Round Robin A.S.D. · guida aggiornata alla versione 0.11.2. Domande, problemi e suggerimenti: scrivete a Marco.</p>
 </main>
 </body>
 </html>

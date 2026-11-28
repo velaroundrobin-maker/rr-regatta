@@ -2,7 +2,7 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.11.1";
+import {delta, circularMean} from "./engine.mjs?v=0.11.2";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
 export const PRUA = ["J1", "J2", "J3", "Tormentina"];
@@ -74,14 +74,11 @@ export function classeVento(tws) {
 
 // ---------------- Raccolta dei punti ----------------
 // fixes: punti GPS recenti {received, cog, sog, accuracy}. Il punto vale solo se rotta e velocità sono stabili da 20 s.
-export function valutaPunto({fixes, adesso, rif, vento, validitaMs, ultimoCambioVele, minSog = 1}) {
-  if (!rif || !Number.isFinite(rif.dir)) return {ok: false, motivo: "direzione del vento non tarata"};
-  // Per le polari l'angolo dal vento deve essere misurato, non presunto: valgono la prua al vento a motore e la
-  // bolina dichiarata su tutte e due le mure (bisettrice). Non valgono una sola mura, l'andatura o il vento a mano.
-  if (["andatura", "bolina", "a mano"].includes(rif.fonte)) return {ok: false, motivo: "per le polari serve la taratura a motore (o di bolina sulle due mure)"};
-  if (Number.isFinite(rif.t) && adesso - rif.t > validitaMs) return {ok: false, motivo: "la taratura del vento ha " + Math.round((adesso - rif.t) / 60000) + " minuti: ritarala"};
-  if (!vento || !Number.isFinite(vento.tws)) return {ok: false, motivo: "manca l'intensità del vento"};
-  if (adesso - vento.t > validitaMs) return {ok: false, motivo: "l'intensità del vento ha " + Math.round((adesso - vento.t) / 60000) + " minuti: aggiornala"};
+// Le polari si agganciano al vento già in uso (taratura, stime di bolina, indicazioni dell'equipaggio) e al vento
+// vero indicato: nessuna nuova taratura, nessuna scadenza. Decisione di Marco del 28/11.
+export function valutaPunto({fixes, adesso, rif, vento, ultimoCambioVele, minSog = 1}) {
+  if (!rif || !Number.isFinite(rif.dir)) return {ok: false, motivo: "direzione del vento non ancora tarata"};
+  if (!vento || !Number.isFinite(vento.tws)) return {ok: false, motivo: "manca il vento vero (in «Parametri»)"};
   if (classeVento(vento.tws) === null) return {ok: false, motivo: vento.tws > 32 ? "vento oltre i 30 nodi" : "vento sotto i 3 nodi"};
   if (ultimoCambioVele && adesso - ultimoCambioVele < 60000) return {ok: false, motivo: "vele appena cambiate: un minuto per regolarle"};
   const v = fixes.filter(f => adesso - f.received <= 20000 && Number.isFinite(f.cog) && Number.isFinite(f.sog));

@@ -1,19 +1,19 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.11.1";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.11.1";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.11.1";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.11.2";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.11.2";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.11.2";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.11.1";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva, registrazioneAttiva, avviaRegistrazione, fermaRegistrazione} from "./stato.mjs?v=0.11.1";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.11.1";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.11.2";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva, registrazioneAttiva, avviaRegistrazione, fermaRegistrazione} from "./stato.mjs?v=0.11.2";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.11.2";
 import {taratura, muraDa, rottaStabile, rottaTaratura, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.11.1";
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.11.2";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.11.1";
-import {finestre} from "./rapporto.mjs?v=0.11.1";
-import {svgPolare} from "./grafici.mjs?v=0.11.1";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.11.2";
+import {finestre} from "./rapporto.mjs?v=0.11.2";
+import {svgPolare} from "./grafici.mjs?v=0.11.2";
 
-const VERSIONE = "0.11.1";
+const VERSIONE = "0.11.2";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -244,9 +244,9 @@ const veleAttuali = () => indiceVele(pol, pol.vele);
 function elaboraPolari(adesso) {
   if (!regAttiva()) { st.polValuta = null; return; }
   if (pol.propulsione === "motore") { st.polValuta = {ok: false, motivo: "a motore (in «Parametri» scegli «A vela»)"}; return; }
-  const t = tar();
-  st.polValuta = valutaPunto({fixes: st.fixes, adesso, rif: {dir: t.dir, t: t.t, fonte: t.fonte}, vento: pol.vento,
-    validitaMs: pol.imp.validitaMin * 60000, ultimoCambioVele: st.polCambioVele});
+  // Il vento in uso adesso: il vento medio (taratura aggiornata dalle stime di bolina) o l'ultima taratura/indicazione.
+  const t = tar(), medio = statoVento(adesso).medio, dir = Number.isFinite(medio) ? medio : t.dir;
+  st.polValuta = valutaPunto({fixes: st.fixes, adesso, rif: {dir, t: t.t, fonte: t.fonte}, vento: pol.vento, ultimoCambioVele: st.polCambioVele});
   if (st.polValuta.ok && adesso - st.polUltimo >= 2000) {
     st.polUltimo = adesso;
     pol.campioni.push([adesso, +st.polValuta.twa.toFixed(1), +st.polValuta.sog.toFixed(2), +pol.vento.tws.toFixed(1), veleAttuali()]);
@@ -357,7 +357,6 @@ function disegnaPolari() {
   $("pol-vele-stato").textContent = pol.propulsione === "motore" ? "A motore: le polari non si registrano." : "A riva: " + nomeVele(chiaveVele(pol.vele)) + ".";
   document.querySelectorAll("[data-propulsione]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.propulsione === (pol.propulsione || "vela"))));
   document.querySelectorAll("[data-metodo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.metodo === st.polMetodo)));
-  $("pol-validita").value = String(pol.imp.validitaMin);
   // Record (tutte le uscite) o sessione (l'ultima uscita); classi di vento e configurazioni con dati.
   const sess = st.polTipo === "sessione", fin = finestraSessione(), opz = sess ? (fin || {da: Infinity, a: Infinity}) : {};
   document.querySelectorAll("[data-polare]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.polare === (sess ? "sessione" : "record"))));
@@ -742,7 +741,7 @@ function passoVento(perche, conBolina = true) {
 }
 // Vento vero e vele: per le polari della registrazione; si aggiornano in ogni momento con «Parametri».
 function passoParametri() {
-  const v = pol.vento, adesso = Date.now(), fresco = v && adesso - v.t <= pol.imp.validitaMin * 60000;
+  const v = pol.vento, adesso = Date.now(), fresco = !!v;
   return {titolo: "Vento e vele", facoltativo: true, testo: "Vento vero, vele a riva, a vela o a motore. Servono alle polari; si aggiornano in ogni momento con «Parametri».",
     fatto: !!fresco, stato: (v ? "Vento " + numero(v.tws, 1) + " nodi, " + etaTesto(adesso - v.t) : "Vento da indicare") + " · " + nomeVele(chiaveVele(pol.vele)) + (pol.propulsione === "motore" ? " · a motore" : "") + ".",
     azioni: [["parametri", "Aggiorna parametri", !fresco]]};
@@ -778,12 +777,11 @@ function passiModo(m) {
       passoTimer("Avvia al segnale dei 5 minuti, poi Sincronizza a ogni segnale.")];
   }
   if (m === "polari") {
-    const t = tar(), lim = pol.imp.validitaMin * 60000, adesso = Date.now();
-    const dirOk = t.dir !== null && t.fonte !== "andatura" && (!t.t || adesso - t.t <= lim), twsOk = pol.vento && adesso - pol.vento.t <= lim;
+    const t = tar(), adesso = Date.now(), twsOk = !!pol.vento;
     return [...passiGps(),
-      {...passoVento("Ritarala almeno ogni " + pol.imp.validitaMin + " minuti.", false), fatto: dirOk},
-      {titolo: "Intensità del vento", testo: "A barca ferma, dall'anemometro di coperta.",
-        fatto: !!twsOk, stato: pol.vento ? numero(pol.vento.tws, 1) + " nodi, " + etaTesto(adesso - pol.vento.t) + (twsOk ? "." : ": da aggiornare.") : "Non inserita.",
+      {...passoVento("Basta una taratura: le polari usano il vento già in uso, aggiornato dalle stime e dall'equipaggio."), fatto: t.dir !== null},
+      {titolo: "Intensità del vento", testo: "A barca ferma dall'anemometro di coperta, o stimata dall'equipaggio. Aggiornala quando il vento cambia.",
+        fatto: twsOk, stato: pol.vento ? numero(pol.vento.tws, 1) + " nodi, " + etaTesto(adesso - pol.vento.t) + "." : "Non inserita.",
         azioni: [["vai:vista-polari:pol-tws", "Inserisci il vento", !twsOk]]},
       {titolo: "Vele a riva", testo: "Le polari si separano per vele.", fatto: true, stato: nomeVele(chiaveVele(pol.vele)) + ".",
         azioni: [["vai:vista-polari:pol-prua", "Cambia vele"]]},
@@ -797,7 +795,7 @@ const INTRO = {
   navigazione: "Basta il GPS; per vento e andatura serve la taratura.",
   allenamento: "Prepara solo quello che serve: i passi facoltativi si saltano.",
   regata: "Segui i passi nell'ordine, sul campo di regata.",
-  polari: "Servono vento aggiornato e vele a riva."
+  polari: "Servono una taratura, il vento vero e le vele a riva."
 };
 function disegnaGuida() {
   if (!st.modo) return;
@@ -893,9 +891,9 @@ function disegnaParametri() {
   const p = $("pannello-parametri");
   p.hidden = !st.parAperto;
   if (!st.parAperto) return;
-  const adesso = Date.now(), t = tar(), v = pol.vento, lim = pol.imp.validitaMin * 60000;
+  const adesso = Date.now(), t = tar(), v = pol.vento;
   document.querySelectorAll("[data-propulsione]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.propulsione === (pol.propulsione || "vela"))));
-  $("par-vento-stato").textContent = v ? "Indicato " + etaTesto(adesso - v.t) + ": " + numero(v.tws, 1) + " nodi" + (adesso - v.t > lim ? ". Per le polari va riconfermato ogni " + pol.imp.validitaMin + " minuti." : ".")
+  $("par-vento-stato").textContent = v ? "Indicato " + etaTesto(adesso - v.t) + ": " + numero(v.tws, 1) + " nodi. Vale finché non lo cambi."
     : "Vento vero stimato dall'equipaggio o letto all'anemometro a barca ferma.";
   $("par-dir-stato").textContent = t.dir === null ? "Vento non tarato." : "Vento da " + angolo(t.dir) + ", " + fonteVento(t) + (t.t ? " " + etaTesto(adesso - t.t) : "") + ".";
   html("par-prua", pulsantiScelta(PRUA, pol.vele.prua, "data-prua"));
@@ -1649,7 +1647,7 @@ async function scaricaRapporto(da) {
   st.preparaRapporto = true; avvisa("Preparo il rapporto…");
   try {
     salva(memoria, s);
-    const {creaRapporto} = await import("./pdf.mjs?v=0.11.1");
+    const {creaRapporto} = await import("./pdf.mjs?v=0.11.2");
     const {doc, nome, pagine} = await creaRapporto({s, pol, finestra: {...f, a: f.inCorso ? Date.now() : f.a}, versione: VERSIONE});
     doc.save(nome);
     evento("Rapporto PDF: " + nome); avvisa("Rapporto " + nome + " scaricato (" + pagine + (pagine === 1 ? " pagina)." : " pagine).")); salvaPresto();
@@ -1843,7 +1841,6 @@ for (const tipo of ["prua", "randa", "portante"]) $("pol-" + tipo).addEventListe
 $("pol-tipo").addEventListener("click", e => { const b = e.target.closest("[data-polare]"); if (b) { st.polTipo = b.dataset.polare; disegnaPolari(); } });
 $("pol-classi").addEventListener("click", e => { const b = e.target.closest("[data-classe]"); if (b) { st.polClasse = Number(b.dataset.classe); disegnaPolari(); } });
 $("pol-config").addEventListener("change", e => { st.polConfig = e.target.value; disegnaPolari(); });
-$("pol-validita").addEventListener("change", e => { pol.imp.validitaMin = Number(e.target.value); salvaPolari(); disegnaPolari(); });
 $("pol-usa-virata").addEventListener("click", e => {
   const a = Number(e.currentTarget.dataset.angolo);
   if (!(a >= 60 && a <= 130)) { avvisa("Angolo di virata fuori dai limiti (60–130°)."); return; }
