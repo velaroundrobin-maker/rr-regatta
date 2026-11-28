@@ -2,7 +2,7 @@
 // Vento: direzione dalla taratura più recente (motore prua al vento o coppia di boline), intensità inserita
 // dall'equipaggio con l'anemometro. Barca: rotta e velocità sul fondo dal GPS.
 // Ogni punto registrato è [t, angolo dal vento con segno (+ mure a sinistra), velocità kn, vento vero kn, configurazione].
-import {delta, circularMean} from "./engine.mjs?v=0.11";
+import {delta, circularMean} from "./engine.mjs?v=0.11.1";
 
 export const CHIAVE_POLARI = "rr-regatta-polari-v1";
 export const PRUA = ["J1", "J2", "J3", "Tormentina"];

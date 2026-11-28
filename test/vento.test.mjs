@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
+import {taratura, muraDa, rottaStabile, rottaTaratura, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
   aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina} from "../js/vento.mjs";
 import {move, bearing, norm, delta} from "../js/engine.mjs";
 
@@ -187,4 +187,20 @@ test("vento medio: subito dopo la taratura il riferimento è la taratura", () =>
   assert.ok(a.salto > 2.5 && a.salto < 3.6, "salto visibile: " + a.salto);
   assert.equal(analisiVento([], 1000, {tarDir: 7}).medio, 7);
   assert.equal(classificaVento(Array.from({length: 150}, (_, i) => ({t: i * 2000, dir: 200})), 298000).tipo, "stabile", "prima stima dopo 4-5 minuti");
+});
+
+test("rotta per la taratura anche a 1 nodo", () => {
+  // Rotte del telefono a 1 nodo intorno a 030°, con scarti fino a ±25° (rumore pseudocasuale fisso).
+  const rumore = i => ((i * 37) % 51 - 25);
+  const lenti = Array.from({length: 21}, (_, i) => ({received: i * 1000, cog: (30 + rumore(i) + 360) % 360, sog: 1 + ((i * 7) % 5 - 2) / 20}));
+  const r = rottaTaratura(lenti, 20000);
+  assert.ok(r.cog !== null, "a 1 nodo la taratura si fa: " + r.motivo);
+  assert.ok(Math.abs(delta(r.cog, 30)) < 6, "rotta media " + r.cog);
+  assert.match(rottaTaratura(lenti.map(f => ({...f, sog: 0.5})), 20000).motivo, /sotto 0,7 nodi/);
+  // A 5 nodi la barca che gira (da 000° a 040° in 10 s) non va bene.
+  const gira = Array.from({length: 11}, (_, i) => ({received: i * 1000, cog: i * 4, sog: 5}));
+  assert.equal(rottaTaratura(gira, 10000).cog, null);
+  // A 5 nodi, rotta ferma a 200° ±2°: precisa.
+  const dritta = Array.from({length: 11}, (_, i) => ({received: i * 1000, cog: 200 + (i % 3) - 1, sog: 5}));
+  assert.ok(Math.abs(delta(rottaTaratura(dritta, 10000).cog, 200)) < 1);
 });

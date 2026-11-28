@@ -1,7 +1,7 @@
 // Vento stimato dal GPS e tattica di bolina (Fase 3 e 4a).
 // Regole dai manuali della cartella «Manuali Addestramento AI»: vedi «Regole tattiche per l'app».
 // Convenzioni: angoli in gradi da nord vero, in senso orario; «direzione del vento» = da dove viene.
-import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.11";
+import {norm, delta, circularMean, rad} from "./engine.mjs?v=0.11.1";
 
 export const MURE = ["dritta", "sinistra"];
 
@@ -61,6 +61,30 @@ export function rottaStabile(fixes, adesso, {finestraMs = 8000, maxDispersione =
   const disp = Math.max(...v.map(f => Math.abs(delta(f.cog, m))));
   if (disp > maxDispersione) return {cog: null, motivo: "rotta instabile"};
   return {cog: m, motivo: null};
+}
+
+// Rotta per la taratura, anche a bassa velocità (da 0,7 nodi: la prua al vento a motore si fa piano).
+// Rotta = direzione della velocità media (media vettoriale delle velocità del GPS): a 1 nodo le singole rotte del
+// telefono ballano di 15-20°, la media di 20 secondi sbaglia di pochi gradi. Finestra di 10 s sopra i 2 nodi, di 20 s
+// più piano; scarto ammesso crescente al calare della velocità; la rotta non deve girare tra prima e seconda metà.
+export function rottaTaratura(fixes, adesso, {maxDispersione = 8, minSog = 0.7} = {}) {
+  const ultimi = fixes.filter(f => adesso - f.received <= 10000 && Number.isFinite(f.sog));
+  const v10 = ultimi.length ? ultimi.reduce((t, f) => t + f.sog, 0) / ultimi.length : 0;
+  const finestraMs = v10 >= 2 ? 10000 : 20000;
+  const v = fixes.filter(f => adesso - f.received <= finestraMs && Number.isFinite(f.cog) && Number.isFinite(f.sog));
+  if (v.length < 5) return {cog: null, motivo: "pochi dati"};
+  if (finestraMs > 10000 && v[v.length - 1].received - v[0].received < 15000) return {cog: null, motivo: "sotto i 2 nodi servono 20 secondi di rotta"};
+  const pesi = v.reduce((t, f) => t + f.sog, 0), sog = pesi / v.length;
+  if (sog < minSog) return {cog: null, motivo: "velocità sotto " + String(minSog).replace(".", ",") + " nodi", sog};
+  const media = lista => { let x = 0, y = 0; for (const f of lista) { x += f.sog * Math.sin(rad(f.cog)); y += f.sog * Math.cos(rad(f.cog)); } return norm(Math.atan2(x, y) * 180 / Math.PI); };
+  const cog = media(v);
+  const sd = Math.sqrt(v.reduce((t, f) => t + f.sog * delta(f.cog, cog) ** 2, 0) / pesi);
+  const tol = Math.max(maxDispersione / 2, 16 / sog); // 4° a vela sopra i 4 nodi, 16° a 1 nodo, 23° a 0,7 nodi
+  if (sd > tol) return {cog: null, motivo: "rotta instabile", sog};
+  const meta = v[0].received + (v[v.length - 1].received - v[0].received) / 2;
+  const a = v.filter(f => f.received <= meta), b = v.filter(f => f.received > meta);
+  if (a.length >= 2 && b.length >= 2 && Math.abs(delta(media(a), media(b))) > Math.max(8, tol)) return {cog: null, motivo: "la barca sta girando", sog};
+  return {cog, motivo: null, sog, n: v.length, sd};
 }
 
 // Una stima del vento da una bolina stretta stabile, oppure il motivo per cui non si può stimare.

@@ -1,9 +1,9 @@
 // Rapporto PDF di una registrazione (v0.11): solo le sezioni utili alla modalità; vele e polari sempre.
 // Riepilogo, traccia, velocità, prove (Regata e Allenamento), vento, vele, polari della sessione confrontate con il
 // record delle stesse vele, tabella dei record, registro. Si crea sul telefono con jsPDF (lib/jspdf.umd.min.js, MIT).
-import {statistiche, prove, veleUsate, eventiVento, modalita, eventiUscita, dentro} from "./rapporto.mjs?v=0.11";
-import {polare, ottimi, classiConDati, CLASSI_ANGOLO, nomeVele} from "./polari.mjs?v=0.11";
-import {svgTraccia, svgTempo, svgPolare} from "./grafici.mjs?v=0.11";
+import {statistiche, prove, veleUsate, eventiVento, modalita, eventiUscita, dentro} from "./rapporto.mjs?v=0.11.1";
+import {polare, ottimi, classiConDati, CLASSI_ANGOLO, nomeVele} from "./polari.mjs?v=0.11.1";
+import {svgTraccia, svgTempo, svgPolare} from "./grafici.mjs?v=0.11.1";
 
 const A4 = {w: 210, h: 297}, M = 14, L = A4.w - 2 * M, ROSSO = [224, 0, 0], GRIGIO = [110, 110, 110];
 const num = (v, d = 1) => Number.isFinite(v) ? v.toFixed(d).replace(".", ",") : "—";
@@ -21,7 +21,7 @@ function caricaJsPdf() {
   if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
   caricamento ??= new Promise((ok, ko) => {
     const sc = document.createElement("script");
-    sc.src = new URL("../lib/jspdf.umd.min.js?v=0.11", import.meta.url).href;
+    sc.src = new URL("../lib/jspdf.umd.min.js?v=0.11.1", import.meta.url).href;
     sc.onload = () => window.jspdf?.jsPDF ? ok(window.jspdf.jsPDF) : ko(new Error("libreria PDF non disponibile"));
     sc.onerror = () => { caricamento = null; ko(new Error("libreria PDF non scaricata: serve la connessione")); };
     document.head.append(sc);

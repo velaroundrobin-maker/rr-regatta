@@ -1,19 +1,19 @@
 // RR Regatta · v0.5: navigazione GPS, campo di regata, vento e tattica di bolina, polari apprese in allenamento.
-import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.11";
-import {markVMC, norm, delta} from "./engine.mjs?v=0.11";
-import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.11";
+import {gpsFixFromPosition, gpsErrorInfo} from "./gps.mjs?v=0.11.1";
+import {markVMC, norm, delta} from "./engine.mjs?v=0.11.1";
+import {smoothNav, derivaMoto, statoDato, numero, angolo, coordinata, scalaGrafica} from "./nav.mjs?v=0.11.1";
 import {MODELLI, leggiSequenza, tappe, trovaBoa, obiettivo, triangola, distanzaTesto, lineaPartenza, lineaArrivo, bearing, distanceMeters,
-  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.11";
-import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva, registrazioneAttiva, avviaRegistrazione, fermaRegistrazione} from "./stato.mjs?v=0.11";
-import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.11";
-import {taratura, muraDa, rottaStabile, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
-  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.11";
+  TIPI_ALLENAMENTO, campoAllenamento, aggiornaSequenza, prossimoCodice} from "./campo.mjs?v=0.11.1";
+import {nuovaSessione, nuovoVento, nuovoTimer, nuovoCrono, applicaModello, verifica, carica, salva, registrazioneAttiva, avviaRegistrazione, fermaRegistrazione} from "./stato.mjs?v=0.11.1";
+import {avviaTimer, sincronizza, spostaMinuto, segnali, testoTimer, testoCronometro, avviaFerma, tempoCronometro, distanzaTempo} from "./cronometro.mjs?v=0.11.1";
+import {taratura, muraDa, rottaStabile, rottaTaratura, stimaDaBolina, analisiVento, buonoScarso, classificaVento, aggiornaAllarmeScarso,
+  aggiornaAllarmeRotazione, bordoFavorevole, distanzaLayline, latoFavorito, boaDiBolina, rotteDiBolina, andatura, ANDATURE, ventoDaAndatura} from "./vento.mjs?v=0.11.1";
 import {CHIAVE_POLARI, PRUA, RANDA, PORTANTI, MAX_CAMPIONI, nuovePolari, verificaPolari, chiaveVele, nomeVele, indiceVele, ventoVero,
-  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.11";
-import {finestre} from "./rapporto.mjs?v=0.11";
-import {svgPolare} from "./grafici.mjs?v=0.11";
+  classeVento, valutaPunto, polare, ottimi, velocitaPolare, classiConDati, configurazioniConDati, tabellaCsv, unisciPolari} from "./polari.mjs?v=0.11.1";
+import {finestre} from "./rapporto.mjs?v=0.11.1";
+import {svgPolare} from "./grafici.mjs?v=0.11.1";
 
-const VERSIONE = "0.11";
+const VERSIONE = "0.11.1";
 const R = 6371008.8;
 const rad = d => d * Math.PI / 180;
 const $ = id => document.getElementById(id);
@@ -191,8 +191,8 @@ function segnale() {
 
 function rottaPerTaratura(maxDispersione = 8) {
   if (!fixVivo()) { avvisa("Serve il GPS attivo con una posizione recente."); return null; }
-  const r = rottaStabile(st.fixes, Date.now(), {finestraMs: 10000, maxDispersione});
-  if (r.cog === null) { avvisa("Rotta non ancora utilizzabile (" + r.motivo + "): tieni la rotta costante, sopra 1,5 nodi, per una decina di secondi e riprova."); return null; }
+  const r = rottaTaratura(st.fixes, Date.now(), {maxDispersione});
+  if (r.cog === null) { avvisa("Rotta non ancora utilizzabile (" + r.motivo + "): tieni la rotta costante per una ventina di secondi, anche a 1 nodo, e riprova."); return null; }
   return r.cog;
 }
 function taraMotore() {
@@ -734,7 +734,7 @@ const passoSchermo = () => ({titolo: "Schermo sempre acceso", testo: "Resta acce
   fatto: !!st.wakeLock, stato: st.wakeLock ? "Lo schermo resta acceso." : "Lo schermo può spegnersi.", azioni: st.wakeLock ? [] : [["schermo", "Tieni acceso lo schermo", true]]});
 function passoVento(perche, conBolina = true) {
   const t = tar(), ok = t.dir !== null;
-  return {titolo: "Taratura del vento", testo: perche + " A motore: prua al vento, rotta costante 10 secondi, poi premi." + (conBolina ? " A vela: in bolina stretta, rotta costante, premi la mura su cui sei." : ""),
+  return {titolo: "Taratura del vento", testo: perche + " A motore: prua al vento, rotta costante per 10-20 secondi (basta 1 nodo), poi premi." + (conBolina ? " A vela: in bolina stretta, rotta costante, premi la mura su cui sei." : ""),
     fatto: ok, stato: t.dir === null ? "Vento non tarato." : "Vento da " + angolo(t.dir) + ", " + fonteVento(t) + (t.t ? " " + etaTesto(Date.now() - t.t) : "") +
       (t.misurato ? " · angolo di virata " + Math.round(t.angoloVirata) + "°." : "."),
     azioni: [["motore", t.dir === null ? "Prua al vento a motore" : "Ritara: prua al vento a motore", t.dir === null],
@@ -1649,7 +1649,7 @@ async function scaricaRapporto(da) {
   st.preparaRapporto = true; avvisa("Preparo il rapporto…");
   try {
     salva(memoria, s);
-    const {creaRapporto} = await import("./pdf.mjs?v=0.11");
+    const {creaRapporto} = await import("./pdf.mjs?v=0.11.1");
     const {doc, nome, pagine} = await creaRapporto({s, pol, finestra: {...f, a: f.inCorso ? Date.now() : f.a}, versione: VERSIONE});
     doc.save(nome);
     evento("Rapporto PDF: " + nome); avvisa("Rapporto " + nome + " scaricato (" + pagine + (pagine === 1 ? " pagina)." : " pagine).")); salvaPresto();

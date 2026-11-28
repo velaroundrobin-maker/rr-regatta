@@ -4,6 +4,10 @@ Tattico di bordo basato sul GPS del telefono o del tablet, sviluppato per Round 
 
 Sito: https://velaroundrobin-maker.github.io/rr-regatta/
 
+## Versione 0.11.1
+
+- Taratura possibile da 0,7 nodi: rotta = media vettoriale delle velocità GPS, su 20 s sotto i 2 nodi (10 s sopra), scarto ammesso che cresce al calare della velocità, controllo che la barca non stia girando.
+
 ## Versione 0.11
 
 - Registrazione per modalità: entrando si sceglie «Registrare la traccia? Sì / No»; traccia, dati ogni 2 s e punti delle polari si salvano solo durante una registrazione («● REG» in alto, Stop in Navigazione/Polari o dalla pagina iniziale).
